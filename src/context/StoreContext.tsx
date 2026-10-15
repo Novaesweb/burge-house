@@ -284,6 +284,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         subscribeProducts(siteId, (prods) => {
           if (prods) {
             setProducts(prods);
+            // Itens de um catálogo anterior não podem chegar ao checkout.
+            // O cliente vê o aviso para adicioná-los novamente com o cardápio atual.
+            setCart((current) => current.filter((item) =>
+              prods.some((product) => product.id === item.product.id && product.isActive !== false)
+            ));
           }
         })
       );
@@ -453,6 +458,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     paymentChange?: string;
     notes?: string;
   }): Promise<Order> => {
+    if (cart.length === 0) {
+      throw new Error('Seu carrinho foi atualizado. Adicione um item do cardápio para continuar.');
+    }
     const items = cart.map((item) => ({
       productId: item.product.id,
       name: item.product.name,

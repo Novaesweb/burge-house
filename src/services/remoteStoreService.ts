@@ -97,7 +97,19 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
   const attempt=saved?.request===serialized?saved:{request:serialized,key:crypto.randomUUID(),token:Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('')};
   localStorage.setItem(attemptKey,JSON.stringify(attempt));
   const {data,error}=await requireSupabase().rpc('delivery_place_order',{p_store_id:siteId,p_request:request,p_idempotency_key:attempt.key,p_access_token:attempt.token});
-  if(error){const messages:Record<string,string>={STORE_UNAVAILABLE:'A loja está indisponível.',STORE_CLOSED:'A loja está fechada.',PRODUCT_UNAVAILABLE:'Um item não está mais disponível. Atualize o carrinho.',ORDER_RATE_LIMIT:'Aguarde alguns minutos antes de enviar outro pedido.',INVALID_PAYMENT:'Escolha uma forma de pagamento aceita pela loja.'};throw new Error(messages[error.message]||'Não foi possível confirmar o pedido. Confira os dados e tente novamente.');}
+  if(error){const messages:Record<string,string>={
+    STORE_UNAVAILABLE:'A loja está indisponível.',
+    STORE_CLOSED:'A loja está fechada no momento.',
+    PRODUCT_UNAVAILABLE:'Um item do carrinho não está mais disponível. Remova-o e adicione-o novamente.',
+    ORDER_RATE_LIMIT:'Aguarde alguns minutos antes de enviar outro pedido.',
+    INVALID_PAYMENT:'Escolha uma forma de pagamento aceita pela loja.',
+    INVALID_CUSTOMER:'Informe seu nome completo.',
+    INVALID_PHONE:'Informe um telefone com DDD e número.',
+    INVALID_ADDRESS_OR_NOTES:'Complete rua, número e bairro para a entrega.',
+    INVALID_ITEMS:'Adicione pelo menos um item ao carrinho.',
+    INVALID_QUANTITY:'A quantidade de um item não é válida.',
+    ORDER_TOO_LARGE:'O pedido ultrapassa o limite permitido. Reduza as quantidades e tente novamente.',
+  };throw new Error(messages[error.message]||'Não foi possível confirmar o pedido. Confira os dados e tente novamente.');}
   const result=data as Order;
   if(!result?.id)throw new Error('O banco não confirmou seu pedido.');
   const accesses=guestOrders(siteId);localStorage.setItem(`delivery:order-access:${siteId}`,JSON.stringify([{id:result.id,token:attempt.token},...accesses.filter(item=>item.id!==result.id)].slice(0,50)));
