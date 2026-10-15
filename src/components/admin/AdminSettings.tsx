@@ -40,6 +40,8 @@ export const AdminSettings: React.FC = () => {
   const [logoUrl, setLogoUrl] = useState(siteSettings.logoUrl);
   const [bannerUrl, setBannerUrl] = useState(siteSettings.bannerUrl);
   const [primaryColor, setPrimaryColor] = useState(siteSettings.primaryColor || '#dc2626');
+  const [pixKey, setPixKey] = useState(siteSettings.pixKey || '');
+  const [pixKeyType, setPixKeyType] = useState(siteSettings.pixKeyType || 'random');
   const [acceptedMethods, setAcceptedMethods] = useState<PaymentMethod[]>(
     siteSettings.acceptedPaymentMethods || ['pix', 'credit_card', 'cash']
   );
@@ -84,6 +86,8 @@ export const AdminSettings: React.FC = () => {
         bannerUrl,
         primaryColor,
         acceptedPaymentMethods: acceptedMethods,
+        pixKey,
+        pixKeyType,
         adminId,
         adminName: adminResponsibleName,
       }),
@@ -353,6 +357,18 @@ export const AdminSettings: React.FC = () => {
                 Com solicitação de troco
               </span>
             </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+            <div>
+              <label className="text-neutral-300 font-semibold block mb-1">Chave PIX</label>
+              <input value={pixKey} onChange={(event) => setPixKey(event.target.value)} placeholder="Informe a chave antes de ativar PIX" className="w-full p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+            </div>
+            <div>
+              <label className="text-neutral-300 font-semibold block mb-1">Tipo da chave</label>
+              <select value={pixKeyType} onChange={(event) => setPixKeyType(event.target.value as typeof pixKeyType)} className="w-full p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <option value="random">Aleatória</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option>
+              </select>
+            </div>
           </div>
         </div>
 

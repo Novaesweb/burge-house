@@ -24,12 +24,8 @@ export const PixWhatsAppProofCard: React.FC<PixWhatsAppProofCardProps> = ({
   const { siteSettings } = useStore();
   const [copied, setCopied] = useState(false);
 
-  const pixKey =
-    siteSettings?.pixKey ||
-    siteSettings?.phone ||
-    '11987654321';
-
-  const storePhone = siteSettings?.phone || '(11) 98765-4321';
+  const pixKey = siteSettings?.pixKey?.trim();
+  const storePhone = siteSettings?.phone?.trim() || '';
   const cleanStorePhone = storePhone.replace(/\D/g, '');
 
   const whatsappMessage = `Olá! Sou o(a) ${order.customerName}, acabei de fazer o Pedido #${order.orderNumber} no valor de ${formatBRL(order.total)}. Segue meu comprovante PIX em anexo!`;
@@ -38,6 +34,7 @@ export const PixWhatsAppProofCard: React.FC<PixWhatsAppProofCardProps> = ({
   )}`;
 
   const handleCopyKey = () => {
+    if (!pixKey) return;
     try {
       navigator.clipboard.writeText(pixKey);
       setCopied(true);
@@ -46,6 +43,8 @@ export const PixWhatsAppProofCard: React.FC<PixWhatsAppProofCardProps> = ({
       console.error(e);
     }
   };
+
+  if (!pixKey) return <div className="my-4 rounded-3xl border border-amber-500/40 bg-amber-950/40 p-5 text-center text-sm font-semibold text-amber-200">A chave PIX desta loja ainda não foi configurada. Escolha cartão ou dinheiro, ou entre em contato com a loja.</div>;
 
   return (
     <div className="rounded-3xl bg-gradient-to-b from-purple-950/70 via-neutral-900 to-neutral-900 border-2 border-purple-500/60 p-5 shadow-2xl text-left space-y-4 my-4 animate-in fade-in zoom-in-95 duration-200">
@@ -130,7 +129,7 @@ export const PixWhatsAppProofCard: React.FC<PixWhatsAppProofCardProps> = ({
       </div>
 
       {/* THE REQUESTED PROMINENT WHATSAPP PROOF BUTTON */}
-      <a
+      {cleanStorePhone && <a
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
@@ -139,7 +138,7 @@ export const PixWhatsAppProofCard: React.FC<PixWhatsAppProofCardProps> = ({
         <MessageCircle className="w-5 h-5 fill-white group-hover:scale-110 transition-transform" />
         <span className="tracking-tight">📲 Enviar Comprovante no WhatsApp</span>
         <ExternalLink className="w-4 h-4 opacity-70" />
-      </a>
+      </a>}
     </div>
   );
 };

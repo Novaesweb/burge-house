@@ -37,14 +37,14 @@ export const Footer: React.FC = () => {
             <Clock className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
             <span className="text-neutral-300">{siteSettings.openingHours || '10:00 às 23:00'}</span>
           </div>
-          <div className="flex items-center gap-2">
+          {siteSettings.phone && <div className="flex items-center gap-2">
             <Phone className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-            <span className="text-neutral-300">{siteSettings.phone || '(11) 98765-4321'}</span>
-          </div>
-          <div className="flex items-center gap-2">
+            <span className="text-neutral-300">{siteSettings.phone}</span>
+          </div>}
+          {siteSettings.address && <div className="flex items-center gap-2">
             <MapPin className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
             <span className="text-neutral-400 truncate">{siteSettings.address}</span>
-          </div>
+          </div>}
         </div>
 
         {/* Bottom Credits */}

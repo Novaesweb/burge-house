@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   User,
@@ -41,6 +41,13 @@ export const CheckoutView: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const acceptedMethods = useMemo(() => (siteSettings.acceptedPaymentMethods || []).filter((method) =>
+    method !== 'pix' || Boolean(siteSettings.pixKey?.trim())
+  ), [siteSettings.acceptedPaymentMethods, siteSettings.pixKey]);
+
+  useEffect(() => {
+    if (!acceptedMethods.includes(paymentMethod)) setPaymentMethod(acceptedMethods[0] || 'cash');
+  }, [acceptedMethods, paymentMethod]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +61,10 @@ export const CheckoutView: React.FC = () => {
     }
     if (!street.trim() || !number.trim() || !neighborhood.trim()) {
       setErrorMsg('Por favor complete os dados do endereço de entrega.');
+      return;
+    }
+    if (!acceptedMethods.includes(paymentMethod)) {
+      setErrorMsg('Escolha uma forma de pagamento disponível.');
       return;
     }
 
@@ -278,7 +289,7 @@ export const CheckoutView: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {/* PIX */}
-              <button
+              {acceptedMethods.includes('pix') && <button
                 type="button"
                 onClick={() => setPaymentMethod('pix')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all text-center cursor-pointer ${
@@ -291,10 +302,10 @@ export const CheckoutView: React.FC = () => {
                   <QrCode className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-black">PIX</span>
-              </button>
+              </button>}
 
               {/* Cartão */}
-              <button
+              {acceptedMethods.includes('credit_card') && <button
                 type="button"
                 onClick={() => setPaymentMethod('credit_card')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all text-center cursor-pointer ${
@@ -307,10 +318,10 @@ export const CheckoutView: React.FC = () => {
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-black">Cartão</span>
-              </button>
+              </button>}
 
               {/* Dinheiro */}
-              <button
+              {acceptedMethods.includes('cash') && <button
                 type="button"
                 onClick={() => setPaymentMethod('cash')}
                 className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all text-center cursor-pointer ${
@@ -323,8 +334,10 @@ export const CheckoutView: React.FC = () => {
                   <Banknote className="w-5 h-5" />
                 </div>
                 <span className="text-xs font-black">Dinheiro</span>
-              </button>
+              </button>}
             </div>
+
+            {acceptedMethods.length === 0 && <p className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3 text-sm font-semibold text-red-300">A loja ainda não configurou uma forma de pagamento.</p>}
 
             {/* Informação sobre o PIX */}
             {paymentMethod === 'pix' && (
@@ -403,7 +416,7 @@ export const CheckoutView: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || !isRemoteStore(siteId)}
+            disabled={isSubmitting || !isRemoteStore(siteId) || acceptedMethods.length === 0}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/80 active:scale-98 transition-all flex items-center justify-center gap-3 disabled:opacity-60 cursor-pointer"
           >
             {isSubmitting ? (
