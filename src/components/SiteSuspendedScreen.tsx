@@ -1,59 +1,61 @@
 import React from 'react';
-import { ShieldAlert, AlertTriangle, Phone, Mail, Lock } from 'lucide-react';
+import { Clock3, Megaphone, Sparkles, Wrench } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 export const SiteSuspendedScreen: React.FC = () => {
-  const { siteSettings, setIsOwnerLoginModalOpen } = useStore();
-
-  const isInactive = siteSettings.status === 'inactive';
-  const isPendingPayment = siteSettings.status === 'pending_payment';
+  const { siteSettings, storeAvailability } = useStore();
+  const status = storeAvailability.status || siteSettings.status;
+  const statusLabel = status === 'maintenance'
+    ? 'Em manutenção'
+    : status === 'pending_payment'
+      ? 'Aguardando ativação'
+      : status === 'inactive'
+        ? 'Temporariamente indisponível'
+        : 'Acesso temporariamente suspenso';
+  const message = storeAvailability.message?.trim()
+    || 'Estamos fazendo alguns ajustes para atender você melhor. Tente novamente mais tarde.';
+  const returnAt = storeAvailability.returnAt ? new Date(storeAvailability.returnAt) : null;
+  const hasReturnAt = Boolean(returnAt && !Number.isNaN(returnAt.getTime()));
+  const formattedReturn = hasReturnAt
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(returnAt!)
+    : null;
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4 selection:bg-red-600 selection:text-white">
-      <div className="w-full max-w-md bg-neutral-950 border border-neutral-900 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
-        <div className="w-16 h-16 rounded-2xl bg-red-950/80 border border-red-800 text-red-500 flex items-center justify-center mx-auto shadow-xl shadow-red-950/50">
-          <ShieldAlert className="w-8 h-8 animate-pulse" />
-        </div>
+    <main className="novaesweb-blocked-page">
+      <div className="novaesweb-blocked-grid" aria-hidden="true" />
+      <div className="novaesweb-blocked-content">
+        <header className="novaesweb-brand" aria-label="NovaesWeb">
+          <div className="novaesweb-brand-orbit"><span>N</span><i>N</i></div>
+          <strong>NovaesWeb</strong>
+        </header>
 
-        <div className="space-y-2">
-          <span className="px-3 py-1 rounded-full bg-red-950 border border-red-800/80 text-red-400 text-xs font-bold uppercase tracking-wider">
-            {isPendingPayment ? 'Aguardando Ativação' : isInactive ? 'Site Inativo' : 'Acesso Suspenso'}
-          </span>
-          <h2 className="text-xl font-black text-white tracking-tight">
-            {siteSettings.name}
-          </h2>
-          <p className="text-xs text-neutral-400 max-w-xs mx-auto leading-relaxed">
-            {siteSettings.blockReason ||
-              (isPendingPayment
-                ? 'Este estabelecimento está aguardando confirmação de pagamento para liberar o cardápio online.'
-                : isInactive
-                ? 'Este estabelecimento está temporariamente desativado pela administração.'
-                : 'O funcionamento online deste site está temporariamente suspenso.')}
-          </p>
-        </div>
+        <section className="novaesweb-blocked-card" aria-labelledby="blocked-title">
+          <span className="novaesweb-status-badge"><Wrench size={16} /> {statusLabel}</span>
+          <h1 id="blocked-title">Voltamos em breve</h1>
+          <p className="novaesweb-blocked-lead">Esta loja está temporariamente indisponível.</p>
 
-        <div className="p-4 rounded-2xl bg-neutral-900/60 border border-neutral-800 text-xs text-neutral-400 space-y-2 text-left">
-          <div className="font-bold text-neutral-300 flex items-center gap-1.5">
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <span>Informações para o Proprietário:</span>
+          <div className="novaesweb-message-box">
+            <Megaphone aria-hidden="true" />
+            <div>
+              <p>Comunicado da loja</p>
+              <span>{message}</span>
+            </div>
           </div>
-          <p>
-            Caso você seja o responsável por esta loja, regularize a sua assinatura ou entre em contato com a administração da plataforma para reativação imediata.
-          </p>
-        </div>
 
-        <div className="pt-2 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => setIsOwnerLoginModalOpen(true)}
-            className="w-full py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white font-bold text-xs flex items-center justify-center gap-2 border border-neutral-800 transition-colors"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Acesso do Proprietário</span>
-          </button>
-        </div>
+          {hasReturnAt && (
+            <div className="novaesweb-return-box">
+              <Clock3 aria-hidden="true" />
+              <div>
+                <p>Previsão de retorno</p>
+                <span>{formattedReturn}</span>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <footer className="novaesweb-blocked-footer"><Sparkles size={14} /> NovaesWeb Connect · Acesso seguro</footer>
       </div>
-    </div>
+    </main>
   );
 };
 

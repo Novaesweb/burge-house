@@ -13,6 +13,7 @@ import {
   SelectedAddon,
   OrderReview,
   StoreAdmin,
+  StoreAvailability,
   SupportTicket,
   SupportMessage,
 } from '../types';
@@ -30,6 +31,7 @@ import {
   INITIAL_CUSTOMERS,
   initializeStoreData,
   subscribeSiteSettings,
+  subscribeStoreAvailability,
   updateSiteSettings,
   subscribeCategories,
   saveCategory,
@@ -76,6 +78,7 @@ interface StoreContextType {
   siteId: string;
   setSiteId: (id: string) => void;
   siteSettings: SiteSettings;
+  storeAvailability: StoreAvailability;
   categories: Category[];
   products: Product[];
   orders: Order[];
@@ -184,6 +187,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [dataError, setDataError] = useState('');
   const [siteId, setSiteId] = useState<string>(() => getStoreSiteId());
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [storeAvailability, setStoreAvailability] = useState<StoreAvailability>({ status: 'active' });
   const [adminId, setAdminId] = useState<string>(() => getStoreAdminId(getStoreSiteId()));
   const [storeAdmin, setStoreAdmin] = useState<StoreAdmin>(DEFAULT_STORE_ADMIN);
   // A loja oficial nunca mostra o catálogo de demonstração enquanto o catálogo
@@ -269,6 +273,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (settings) {
             setSiteSettings(settings);
           }
+        })
+      );
+
+      unsubs.push(
+        subscribeStoreAvailability(siteId, (availability) => {
+          setStoreAvailability(availability);
         })
       );
 
@@ -578,6 +588,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         storeAdmin,
         updateStoreAdminAction,
         siteSettings,
+        storeAvailability,
         categories,
         products,
         orders,

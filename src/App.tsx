@@ -45,6 +45,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
     setCustomerView,
     adminView,
     siteSettings,
+    storeAvailability,
     categories,
     isOwnerAuthenticated,
     isLoading,
@@ -61,8 +62,10 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
     );
   }
 
-  // 1. IF SITE IS SUSPENDED OR INACTIVE BY PLATFORM ADMIN (Blocking Guard)
-  if (siteSettings.status === 'suspended' || siteSettings.status === 'inactive') {
+  // The Master availability stream uses the official store_id and is the
+  // source of truth for customer-facing access.
+  const blockingStatuses = ['suspended', 'maintenance', 'inactive', 'pending_payment', 'archived'];
+  if (blockingStatuses.includes(storeAvailability.status || siteSettings.status)) {
     return <SiteSuspendedScreen />;
   }
 

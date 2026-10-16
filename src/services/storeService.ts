@@ -1,6 +1,6 @@
 import * as local from './localStoreService';
 import * as remote from './remoteStoreService';
-import type { SiteSettings, Category, Product, Order, OrderStatus, Customer, ManualPayment, OrderReview, StoreAdmin, SupportTicket, SupportMessage } from '../types';
+import type { SiteSettings, Category, Product, Order, OrderStatus, Customer, ManualPayment, OrderReview, StoreAdmin, StoreAvailability, SupportTicket, SupportMessage } from '../types';
 export * from './storeDefaults';
 export { setConnectedStore } from './remoteStoreService';
 export function getStoreSiteId(){const id=import.meta.env.VITE_NOVAESWEB_STORE_ID?.trim();return remote.connectedStore?.id||(id&&remote.isOfficialId(id)?id:local.DEFAULT_SITE_ID);}
@@ -8,6 +8,10 @@ export function getStoreAdminId(siteId=local.DEFAULT_SITE_ID){return local.getSt
 export const isRemoteStore=(siteId:string)=>remote.isOfficialId(siteId);
 export async function initializeStoreData(siteId=getStoreSiteId()){if(isRemoteStore(siteId))await remote.initializeRemoteCatalog(siteId);}
 export function subscribeSiteSettings(siteId:string,onData:(value:SiteSettings)=>void){return isRemoteStore(siteId)?remote.subscribeRemoteSettings(siteId,onData):local.subscribeSiteSettings(siteId,onData);}
+export function subscribeStoreAvailability(siteId:string,onData:(value:StoreAvailability)=>void){
+  if(isRemoteStore(siteId))return remote.subscribeRemoteAvailability(siteId,onData);
+  return local.subscribeSiteSettings(siteId,settings=>onData({status:settings.status,message:settings.blockReason||null}));
+}
 export async function updateSiteSettings(siteId:string,data:Partial<SiteSettings>){return isRemoteStore(siteId)?remote.updateRemoteSettings(siteId,data):local.updateSiteSettings(siteId,data);}
 export function subscribeCategories(siteId:string,onData:(value:Category[])=>void){return isRemoteStore(siteId)?remote.subscribeRemoteCategories(siteId,onData):local.subscribeCategories(siteId,onData);}
 export async function saveCategory(siteId:string,data:Category){return isRemoteStore(siteId)?remote.saveRemoteCategory(siteId,data):local.saveCategory(siteId,data);}

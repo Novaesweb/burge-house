@@ -1,5 +1,5 @@
 import { requireSupabase } from '../lib/supabase';
-import type { Category, Product, SiteSettings, Order, Customer, ManualPayment, OrderReview, StoreAdmin } from '../types';
+import type { Category, Product, SiteSettings, Order, Customer, ManualPayment, OrderReview, StoreAdmin, StoreAvailability } from '../types';
 import { DEFAULT_SITE_SETTINGS, DEFAULT_STORE_ADMIN, INITIAL_CATEGORIES, INITIAL_PRODUCTS, DEFAULT_SITE_ID } from './storeDefaults';
 import { readLocal } from '../lib/localStore';
 import type { OfficialStore } from './connectService';
@@ -54,6 +54,26 @@ export function subscribeRemoteSettings(siteId:string,onData:(value:SiteSettings
     if(!data)throw new Error('A loja está indisponível ou o catálogo ainda não foi importado.');
     return {...DEFAULT_SITE_SETTINGS,...data.payload,siteId,ownerUid:'',ownerEmail:'',adminId:undefined,adminName:undefined,ownerPin:undefined,status:'active'} as SiteSettings;
   },onData);
+}
+export function subscribeRemoteAvailability(siteId:string,onData:(value:StoreAvailability)=>void) {
+  let active=true;let fetching=false;
+  const refresh=async()=>{
+    if(!active||fetching)return;fetching=true;
+    try{
+      const {data,error}=await requireSupabase().rpc('delivery_public_availability',{p_store_id:siteId});
+      // During a phased deployment, preserve the store's existing behavior
+      // until the Master migration is available in the connected project.
+      if(error?.code==='PGRST202')return;
+      assertResult(error);
+      const row=Array.isArray(data)?data[0]:data;
+      if(!row)throw new Error('A disponibilidade desta loja não foi encontrada.');
+      if(active)onData({status:row.status||'active',blockMode:row.block_mode,message:row.block_message,returnAt:row.block_until});
+    }catch(error){if(active)dataError(error);}finally{fetching=false;}
+  };
+  const onVisible=()=>{if(document.visibilityState==='visible')void refresh();};
+  document.addEventListener('visibilitychange',onVisible);
+  const timer=window.setInterval(onVisible,15_000);void refresh();
+  return()=>{active=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
 }
 export async function updateRemoteSettings(siteId:string,settings:Partial<SiteSettings>) {
   const client=requireSupabase();const {data,error}=await client.from('delivery_settings').select('payload').eq('store_id',siteId).single();assertResult(error);

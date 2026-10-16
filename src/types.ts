@@ -61,6 +61,13 @@ export interface SiteSettings {
   updatedAt?: string;
 }
 
+export interface StoreAvailability {
+  status: 'active' | 'inactive' | 'suspended' | 'maintenance' | 'pending_payment' | 'archived' | string;
+  blockMode?: string | null;
+  message?: string | null;
+  returnAt?: string | null;
+}
+
 export interface ManualPayment {
   id: string;
   siteId: string;
