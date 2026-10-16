@@ -1,8 +1,9 @@
 import { useConnect } from '../../context/ConnectContext';
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, Store, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight } from 'lucide-react';
 import { useStore, type AdminView } from '../../context/StoreContext';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
+import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
 const navigation = [
   { id: 'dashboard', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'orders', label: 'Pedidos', icon: Package },
@@ -27,7 +28,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   return <div className="admin-shell">
     {menuOpen && <button className="admin-scrim" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} />}
     <aside className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
-      <a href="/" className="admin-brand"><span className="brand-symbol"><Store size={22} /></span><span><strong>{siteSettings.name}</strong><small>GESTÃO DA LOJA</small></span></a>
+      <a href="/" className="admin-brand"><span className="brand-symbol"><img src={burgerHouseLogo} alt="" className="h-full w-full object-contain p-0.5" /></span><span><strong>{siteSettings.name}</strong><small>GESTÃO DA LOJA</small></span></a>
       <div className="sidebar-section-label">PRINCIPAL</div>
       <nav aria-label="Menu administrativo">{navigation.map(({id,label,icon: Icon},index) => <React.Fragment key={id}>
         {index === 5 && <div className="sidebar-section-label">GERENCIAMENTO</div>}

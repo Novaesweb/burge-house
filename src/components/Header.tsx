@@ -1,7 +1,8 @@
 import { SiteImage } from './SiteImage';
 import React from 'react';
-import { ShoppingBag, Store, Flame } from 'lucide-react';
+import { ShoppingBag, Store } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import burgerHouseLogo from '../assets/brand/burger-house-logo.png';
 
 export const Header: React.FC = () => {
   const { siteSettings, cartCount, setCustomerView, appMode, setAppMode } = useStore();
@@ -19,15 +20,11 @@ export const Header: React.FC = () => {
         >
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-[1.5px] shadow-lg shadow-red-950/60 flex-shrink-0">
             <div className="w-full h-full rounded-[14px] bg-black overflow-hidden flex items-center justify-center">
-              {siteSettings.logoUrl ? (
-                <SiteImage
-                  src={siteSettings.logoUrl}
-                  alt={siteSettings.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Flame className="w-6 h-6 text-red-500" />
-              )}
+              <SiteImage
+                src={siteSettings.logoUrl || burgerHouseLogo}
+                alt={siteSettings.name}
+                className="w-full h-full object-contain p-0.5"
+              />
             </div>
           </div>
           <div>

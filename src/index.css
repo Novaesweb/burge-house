@@ -33,6 +33,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 [class*='shadow-'] { --tw-shadow-color: #00000030; }
 .bg-black\/80, .bg-black\/70, .bg-black\/50 { background-color: #201713c7; color: white; }
 .bg-black\/70.text-white { color: white; }
+.burger-house-app-shell{background:linear-gradient(115deg,#160e0bd9,#35170fd6),url('./assets/brand/burger-house-background.png') center/cover fixed}
+.burger-house-content{background:linear-gradient(180deg,#201713e8,#201713f5)}
 .store-hero { display:grid; grid-template-columns:1.1fr 1fr; min-height:340px; border-radius:26px; overflow:hidden; background:#171010; margin:8px 0 32px; border:1px solid #382020; }
 .hero-copy { padding:36px; align-self:center; }
 .hero-eyebrow { display:flex; gap:7px; align-items:center; font-size:10px; font-weight:750; letter-spacing:1.4px; color:#fb7185; }

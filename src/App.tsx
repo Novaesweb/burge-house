@@ -91,11 +91,11 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
 
   // 3. PUBLIC CUSTOMER DELIVERY SITE (RESPONSIVE: Mobile first, fluid tablet & desktop with max-w-4xl / max-w-5xl)
   return (
-    <div className="min-h-screen bg-black text-white flex justify-center selection:bg-red-600 selection:text-white antialiased">
+    <div className="burger-house-app-shell min-h-screen text-white flex justify-center selection:bg-red-600 selection:text-white antialiased">
       <AudioNotificationBanner />
       <CartToastNotification />
       {/* Responsive Container: Full width on mobile, centered modern card on desktop */}
-      <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl min-h-screen bg-black md:bg-neutral-950 md:border-x md:border-neutral-900 flex flex-col relative pb-24 md:pb-16 shadow-2xl">
+      <div className="burger-house-content w-full max-w-md md:max-w-3xl lg:max-w-5xl min-h-screen md:border-x md:border-neutral-900 flex flex-col relative pb-24 md:pb-16 shadow-2xl">
         {/* Sticky Header */}
         <Header />
 

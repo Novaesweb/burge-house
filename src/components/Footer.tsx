@@ -1,6 +1,7 @@
 import React from 'react';
-import { Clock, Phone, MapPin, Flame } from 'lucide-react';
+import { Clock, Phone, MapPin } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import burgerHouseLogo from '../assets/brand/burger-house-logo.png';
 
 export const Footer: React.FC = () => {
   const { siteSettings } = useStore();
@@ -12,8 +13,8 @@ export const Footer: React.FC = () => {
         {/* Brand line with subtle gradient */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 flex items-center justify-center shadow-md shadow-red-950/50">
-              <Flame className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-px shadow-md shadow-red-950/50">
+              <img src={burgerHouseLogo} alt="" className="w-full h-full object-contain rounded-[7px]" />
             </div>
             <div>
               <h4 className="text-sm font-extrabold text-white tracking-tight leading-none">
