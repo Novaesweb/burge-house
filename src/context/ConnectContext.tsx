@@ -30,14 +30,19 @@ export function ConnectProvider({ children }: {children: React.ReactNode}) {
     if (!session || !supabase) { setStore(null); setRegistration(null); setError(''); return; }
     try {
       const requestId = providedRequestId || import.meta.env.VITE_NOVAESWEB_REQUEST_ID?.trim() || localStorage.getItem(`novaesweb:request:${session.user.id}`);
+      const configuredStoreId = import.meta.env.VITE_NOVAESWEB_STORE_ID?.trim();
+      const configuredNxId = import.meta.env.VITE_NOVAESWEB_NX_ID?.trim();
       let candidate: OfficialStore | null = null;
-      if (requestId) {
+      // Once a store has official Master identifiers, they are authoritative.
+      // An old browser request id must never send an established store back to
+      // the legacy registration flow.
+      if (configuredStoreId && configuredNxId) {
+        candidate = await validateOfficialStore(configuredStoreId, configuredNxId);
+      } else if (requestId) {
         const result = await getRegistrationStatus(requestId);
         if (revision !== generation.current) return;
         setRegistration(result);
         if (result.status === 'approved') candidate = await validateOfficialStore(result.store_id || '', result.nx_id || '');
-      } else if (import.meta.env.VITE_NOVAESWEB_STORE_ID && import.meta.env.VITE_NOVAESWEB_NX_ID) {
-        candidate = await validateOfficialStore(import.meta.env.VITE_NOVAESWEB_STORE_ID, import.meta.env.VITE_NOVAESWEB_NX_ID);
       }
       if (revision !== generation.current) return;
       if (candidate && Date.now() - lastCheckIn.current > 240_000) {
