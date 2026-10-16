@@ -13,8 +13,8 @@ export const Footer: React.FC = () => {
         {/* Brand line with subtle gradient */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-px shadow-md shadow-red-950/50">
-              <img src={burgerHouseLogo} alt="" className="w-full h-full object-contain rounded-[7px]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-px shadow-md shadow-red-950/50">
+              <img src={burgerHouseLogo} alt="" className="w-full h-full object-cover object-top scale-125 rounded-[10px]" />
             </div>
             <div>
               <h4 className="text-sm font-extrabold text-white tracking-tight leading-none">

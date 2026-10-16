@@ -18,12 +18,12 @@ export const Header: React.FC = () => {
           }}
           className="flex items-center gap-3 cursor-pointer select-none"
         >
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-[1.5px] shadow-lg shadow-red-950/60 flex-shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-[2px] shadow-lg shadow-red-950/60 flex-shrink-0">
             <div className="w-full h-full rounded-[14px] bg-black overflow-hidden flex items-center justify-center">
               <SiteImage
                 src={siteSettings.logoUrl || burgerHouseLogo}
                 alt={siteSettings.name}
-                className="w-full h-full object-contain p-0.5"
+                className="w-full h-full object-cover object-top scale-125"
               />
             </div>
           </div>

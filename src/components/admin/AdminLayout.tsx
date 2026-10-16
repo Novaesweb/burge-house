@@ -28,7 +28,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
   return <div className="admin-shell">
     {menuOpen && <button className="admin-scrim" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} />}
     <aside className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`}>
-      <a href="/" className="admin-brand"><span className="brand-symbol"><img src={burgerHouseLogo} alt="" className="h-full w-full object-contain p-0.5" /></span><span><strong>{siteSettings.name}</strong><small>GESTÃO DA LOJA</small></span></a>
+      <a href="/" className="admin-brand"><span className="brand-symbol overflow-hidden"><img src={burgerHouseLogo} alt="" className="h-full w-full object-cover object-top scale-125" /></span><span><strong>{siteSettings.name}</strong><small>GESTÃO DA LOJA</small></span></a>
       <div className="sidebar-section-label">PRINCIPAL</div>
       <nav aria-label="Menu administrativo">{navigation.map(({id,label,icon: Icon},index) => <React.Fragment key={id}>
         {index === 5 && <div className="sidebar-section-label">GERENCIAMENTO</div>}
