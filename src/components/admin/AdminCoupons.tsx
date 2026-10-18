@@ -58,6 +58,8 @@ export const AdminCoupons: React.FC = () => {
     else setRefresh(n => n + 1);
   };
 
+  const couponStatus = (c: Coupon) => !c.active ? 'Pausado' : c.expires_at && new Date(c.expires_at).getTime() < Date.now() ? 'Expirado' : c.max_uses !== null && c.used_count >= c.max_uses ? 'Esgotado' : 'Ativo';
+
   return <section className="space-y-5 text-white">
     <header><h1 className="text-2xl font-black">Central de cupons</h1>
       <p className="text-sm text-neutral-400">Cadastre e gerencie cupons exclusivos desta loja. A aplicação no checkout será liberada após a validação de descontos no servidor.</p></header>
@@ -72,7 +74,7 @@ export const AdminCoupons: React.FC = () => {
       <button disabled={saving} className="sm:col-span-2 rounded-xl bg-red-600 p-3 font-black disabled:opacity-50">{saving ? 'Salvando...' : 'Cadastrar cupom'}</button>
     </form>
     <div className="space-y-2">{coupons.map(c => <div key={c.code} className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 flex items-center justify-between gap-3">
-      <div><strong>{c.code}</strong><p className="text-sm text-neutral-400">{c.discount_type === 'percent' ? c.discount_value + '%' : 'R$ ' + Number(c.discount_value).toFixed(2)} de desconto · Mínimo R$ {Number(c.min_order).toFixed(2)} · {c.used_count} usos</p></div>
+      <div><strong>{c.code}</strong><p className="text-sm text-neutral-400">{c.discount_type === 'percent' ? c.discount_value + '%' : 'R$ ' + Number(c.discount_value).toFixed(2)} de desconto · Mínimo R$ {Number(c.min_order).toFixed(2)} · {c.used_count} usos · {couponStatus(c)}{c.expires_at ? ' · Vence ' + new Date(c.expires_at).toLocaleDateString('pt-BR') : ''}</p></div>
       <button type="button" onClick={() => void toggleCoupon(c)} className={'rounded-lg px-3 py-2 font-bold ' + (c.active ? 'bg-green-800' : 'bg-neutral-700')}>{c.active ? 'Ativo' : 'Inativo'}</button>
     </div>)}{coupons.length === 0 && <p className="text-neutral-400">Nenhum cupom cadastrado.</p>}</div>
   </section>;
