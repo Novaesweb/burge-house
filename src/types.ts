@@ -169,6 +169,7 @@ export interface Order {
   subtotal: number;
   deliveryFee: number;
   discount?: number;
+  couponCode?: string;
   changeFor?: number;
   total: number;
   status: OrderStatus;
