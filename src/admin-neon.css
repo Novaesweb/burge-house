@@ -77,3 +77,31 @@
   .connect-card{padding:24px 20px;border-radius:20px}
 }
 @media(prefers-reduced-motion:reduce){.orders-workbench .delivery-order-card{transition:none}}
+
+/* Vibrant burger-themed backgrounds and accents */
+.admin-shell{background:radial-gradient(ellipse at 95% 0%,#ff95003b,transparent 33%),radial-gradient(ellipse at 0% 80%,#ff202e26,transparent 35%),linear-gradient(130deg,#130508,#240c0b 52%,#0b0909)}
+.admin-sidebar{background:linear-gradient(175deg,#21080e 0%,#140a0b 58%,#39100b 100%);border-right:1px solid #fa492d77}
+.admin-topbar{background:linear-gradient(95deg,#21090d,#421409 58%,#1b0a0b);border-bottom:1px solid #ff950065}
+.admin-content{background:radial-gradient(circle at 100% 0%,#ff950015,transparent 42%)}
+.orders-workbench .orders-page-heading{background:linear-gradient(115deg,#48100d,#230d11 56%,#59250c);border-color:#ff950065}
+.orders-workbench .orders-overview>div{background:linear-gradient(140deg,#291115,#180d10);border-color:#ff950055}
+.orders-workbench .orders-overview>div:nth-child(2){border-color:#ff950099}
+.orders-workbench .orders-overview>div:nth-child(3){border-color:#8b24ff99}
+.orders-workbench .orders-overview>div:nth-child(4){border-color:#087cff99}
+.orders-workbench .delivery-order-card{background:linear-gradient(155deg,#291318,#150d10 72%);border-color:var(--order-accent,#ff202e);box-shadow:0 12px 30px #0009,0 0 14px color-mix(in srgb,var(--order-accent,#ff202e) 17%,transparent)}
+.orders-workbench .delivery-order-card:has(.tone-red){--order-accent:#ff202e}
+.orders-workbench .delivery-order-card:has(.tone-orange){--order-accent:#ff9500}
+.orders-workbench .delivery-order-card:has(.tone-purple){--order-accent:#8b24ff}
+.orders-workbench .delivery-order-card:has(.tone-blue){--order-accent:#087cff}
+.orders-workbench .delivery-order-card:has(.tone-green){--order-accent:#00d46a}
+.orders-workbench .delivery-order-card:has(.tone-gray){--order-accent:#666875}
+.orders-workbench .delivery-order-card:hover{border-color:var(--order-accent);box-shadow:0 12px 35px #0009,0 0 24px color-mix(in srgb,var(--order-accent) 35%,transparent)}
+.orders-workbench .orders-control-panel{background:linear-gradient(110deg,#211014,#1c1015);border-color:#ff202e66}
+.orders-workbench .status-filter{transition:box-shadow .2s,transform .2s}
+.orders-workbench .status-filter:hover{transform:translateY(-1px)}
+.connect-page{background:radial-gradient(ellipse at 0% 15%,#ff202e75,transparent 37%),radial-gradient(ellipse at 100% 5%,#ff950055,transparent 38%),radial-gradient(ellipse at 90% 100%,#8b24ff45,transparent 43%),linear-gradient(145deg,#100508,#350b0b 58%,#170a08)}
+.connect-card{background:linear-gradient(155deg,#391315,#170b0d 60%,#32140c);border-color:#ff950088;box-shadow:0 24px 90px #000c,0 0 32px #ff202e50}
+.connect-icon{background:linear-gradient(135deg,#ff202e,#ff9500);color:#fff;border-color:#ffbe4e;box-shadow:0 0 26px #ff950055}
+.connect-card form button{background:linear-gradient(100deg,#ff202e,#ed4111);box-shadow:0 7px 22px #ff202e65}
+.connect-eyebrow{color:#ffc107!important}
+@media(max-width:767px){.admin-shell{background:linear-gradient(145deg,#18090b,#300e0e 60%,#10090b)}}
