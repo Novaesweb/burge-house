@@ -23,6 +23,7 @@ import { PaymentMethod } from '../../types';
 export const AdminSettings: React.FC = () => {
   const {
     siteSettings,
+    products,
     updateSettingsAction,
     siteId,
     adminId,
@@ -37,6 +38,8 @@ export const AdminSettings: React.FC = () => {
   const [openingHours, setOpeningHours] = useState(siteSettings.openingHours);
   const [deliveryFee, setDeliveryFee] = useState(siteSettings.deliveryFee.toString());
   const [isOpen, setIsOpen] = useState(siteSettings.isOpen);
+  const [upsellEnabled, setUpsellEnabled] = useState(siteSettings.upsellEnabled ?? false);
+  const [upsellProductIds, setUpsellProductIds] = useState<string[]>(siteSettings.upsellProductIds || []);
   const [logoUrl, setLogoUrl] = useState(siteSettings.logoUrl);
   const [bannerUrl, setBannerUrl] = useState(siteSettings.bannerUrl);
   const [primaryColor, setPrimaryColor] = useState(siteSettings.primaryColor || '#dc2626');
@@ -80,6 +83,8 @@ export const AdminSettings: React.FC = () => {
         phone,
         address,
         openingHours,
+        upsellEnabled,
+        upsellProductIds,
         deliveryFee: parseFloat(deliveryFee.replace(',', '.')) || 0,
         isOpen,
         logoUrl,
@@ -222,6 +227,21 @@ export const AdminSettings: React.FC = () => {
           </div>
         </div>
 
+        <section className="bg-neutral-900 rounded-3xl p-6 border border-neutral-800 space-y-4">
+          <h3 className="text-base font-bold text-white">Sugestões no carrinho</h3>
+          <label className="flex items-center gap-3 text-sm text-neutral-200">
+            <input type="checkbox" checked={upsellEnabled} onChange={e => setUpsellEnabled(e.target.checked)} />
+            Ativar sugestões de produtos
+          </label>
+          <p className="text-xs text-neutral-400">Escolha os produtos sugeridos. Sem seleção, o sistema mostra produtos disponíveis.</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {products.filter(p => p.isActive).map(p => <label key={p.id} className="flex items-center gap-2 text-sm text-neutral-300">
+              <input type="checkbox" checked={upsellProductIds.includes(p.id)}
+                onChange={e => setUpsellProductIds(prev => e.target.checked ? [...prev,p.id] : prev.filter(id => id !== p.id))} />
+              <span>{p.name}</span>
+            </label>)}
+          </div>
+        </section>
         {/* Section: Identidade do Administrador */}
         <div className="bg-neutral-900 rounded-3xl p-6 border border-neutral-800 space-y-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
