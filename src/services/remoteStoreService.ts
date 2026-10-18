@@ -30,7 +30,7 @@ export function subscribeRemote<T>(siteId:string, table:string, fetcher:()=>Prom
   return()=>{active=false;window.clearInterval(timer);window.removeEventListener(change,onVisible);document.removeEventListener('visibilitychange',onVisible);void client.removeChannel(channel);};
 }
 
-const publicSettingsKeys=['name','slug','phone','address','openingHours','deliveryFee','isOpen','logoUrl','bannerUrl','primaryColor','acceptedPaymentMethods','pixKey','pixKeyType'] as const;
+const publicSettingsKeys=['name','slug','phone','address','openingHours','deliveryFee','isOpen','logoUrl','bannerUrl','customerNotice','customerNoticeEnabled','primaryColor','acceptedPaymentMethods','pixKey','pixKeyType'] as const;
 export function publicSettings(settings:Partial<SiteSettings>) { return Object.fromEntries(publicSettingsKeys.filter(key=>settings[key]!==undefined).map(key=>[key,settings[key]])); }
 export async function initializeRemoteCatalog(siteId:string) {
   if (!connectedStore || connectedStore.id!==siteId || !['owner','admin'].includes(connectedStore.role)) return;
