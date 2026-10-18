@@ -67,6 +67,23 @@ export function incoming(record) {
   if (!Number.isFinite(stamp) || stamp <= 0) return null;
   return { phone: phone(jid.split('@')[0]), text: text.trim(), timestamp: new Date(stamp * 1000).toISOString(), provider_id: key.id };
 }
+export function brazilianVariants(a,b) {
+  if (!/^55\d{10,11}$/.test(a) || !/^55\d{10,11}$/.test(b)) return false;
+  const withoutNinth = n => n.length === 13 && n[4] === '9' ? n.slice(0,4) + n.slice(5) : n;
+  return withoutNinth(a) === withoutNinth(b);
+}
+export async function resolveConsent(event,rpc,cfg,request=fetch) {
+  const code=event.text.match(/^ACEITO PROMOCOES ([a-f0-9-]{36})$/i)?.[1];
+  if(!code)return event;
+  const target=await rpc('consent_target',{challenge:code});
+  if(!target?.phone||target.phone===event.phone)return event;
+  if(!brazilianVariants(target.phone,event.phone))return event;
+  // Never infer consent from number similarity. Ask the authenticated provider
+  // which WhatsApp account owns the exact number registered in the order.
+  const matches=await evolution(cfg,'chat/whatsappNumbers',{numbers:[target.phone]},request);
+  if(!Array.isArray(matches)||matches.length!==1||matches[0].exists!==true||matches[0].number!==target.phone||matches[0].jid!==event.phone+'@s.whatsapp.net')return event;
+  return {...event,phone:target.phone,sender_phone:event.phone,verification:'evolution_on_whatsapp'};
+}
 export async function synchronize(rpc, cfg, request = fetch, clock = () => new Date()) {
   const status = await rpc('status');
   await verifyInstance(cfg, status.phone, request);
@@ -81,7 +98,7 @@ export async function synchronize(rpc, cfg, request = fetch, clock = () => new D
   const records = messages.records;
   if (records.length !== messages.total || records.some(r => typeof r.id !== 'string' || !r.id) || new Set(records.map(r => r.id)).size !== records.length) throw new Error('INBOUND_INCOMPLETE_RETRY');
   const events = records.map(incoming).filter(Boolean).sort((a,b) => a.timestamp.localeCompare(b.timestamp) || (a.text.toUpperCase() === 'SAIR' ? 1 : -1));
-  for (const event of events) await rpc('inbound', event);
+  for (const event of events) await rpc('inbound', await resolveConsent(event,rpc,cfg,request));
   // Only advance after processing every page. Replay after failure is deduplicated in Postgres.
   await rpc('synced', { until });
   return status;
@@ -145,7 +162,7 @@ async function main() {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => {
-    const codes = new Set(['STORE_NOT_AUTHORIZED','INVALID_DATABASE_CONFIG','EVOLUTION_MUST_BE_LOOPBACK','INVALID_EVOLUTION_CONFIG','EVOLUTION_REQUEST_FAILED','INSTANCE_UNAVAILABLE','INSTANCE_BINDING_MISMATCH','UNRESOLVED_OPTOUT_REVIEW_REQUIRED','INVALID_INBOUND_CURSOR','INBOUND_RESPONSE_OR_BACKLOG','INBOUND_CHANGED_RETRY','INBOUND_INCOMPLETE_RETRY','DATABASE_STATUS_FAILED','DATABASE_INBOUND_FAILED','DATABASE_SYNCED_FAILED','DATABASE_CLAIM_FAILED','DATABASE_AUTHORIZE_FAILED','DATABASE_FINISH_FAILED']);
+    const codes = new Set(['STORE_NOT_AUTHORIZED','INVALID_DATABASE_CONFIG','EVOLUTION_MUST_BE_LOOPBACK','INVALID_EVOLUTION_CONFIG','EVOLUTION_REQUEST_FAILED','INSTANCE_UNAVAILABLE','INSTANCE_BINDING_MISMATCH','UNRESOLVED_OPTOUT_REVIEW_REQUIRED','INVALID_INBOUND_CURSOR','INBOUND_RESPONSE_OR_BACKLOG','INBOUND_CHANGED_RETRY','INBOUND_INCOMPLETE_RETRY','DATABASE_STATUS_FAILED','DATABASE_INBOUND_FAILED','DATABASE_SYNCED_FAILED','DATABASE_CLAIM_FAILED','DATABASE_AUTHORIZE_FAILED','DATABASE_FINISH_FAILED','DATABASE_CONSENT_TARGET_FAILED']);
     const code = codes.has(error?.message) ? error.message : error?.code === 'EEXIST' ? 'PROCESS_LOCK_REVIEW_REQUIRED' : 'UNEXPECTED_FAILURE';
     console.error('MARKETING_STOPPED: ' + code + '; nenhum reenvio automático.');
     process.exitCode = 1;

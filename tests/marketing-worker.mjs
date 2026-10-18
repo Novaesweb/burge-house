@@ -1,9 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {configuration,STORE,incoming,deliver,tick,synchronize} from '../backend/marketing/worker.mjs';
+import {configuration,STORE,incoming,deliver,tick,synchronize,resolveConsent,brazilianVariants} from '../backend/marketing/worker.mjs';
 const env={MARKETING_STORE_ID:STORE,SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_PUBLISHABLE_KEY:'sb_publishable_fixture',MARKETING_WORKER_TOKEN:'a'.repeat(64),EVOLUTION_URL:'http://127.0.0.1:8080',EVOLUTION_INSTANCE:'fixture',EVOLUTION_API_KEY:'mock'};
 const cfg=configuration(env),enabled={...cfg,sendEnabled:true};
 const job={store_id:STORE,id:'job',phone:'5551999991111',text:'Fixture',state:'sending'};
+test('nono dígito só é conciliado com confirmação do número pela Evolution',async()=>{
+ const target='5551999991111',sender='555199991111',event={phone:sender,text:'ACEITO PROMOCOES 10000000-0000-4000-8000-000000000001'};
+ assert.equal(brazilianVariants(target,sender),true);assert.equal(brazilianVariants(target,'555199991112'),false);
+ const rpc=async(op,args)=>{assert.equal(op,'consent_target');assert.ok(args.challenge);return{phone:target};};
+ const http=async(url,options)=>{assert.match(url,/chat\/whatsappNumbers/);assert.deepEqual(JSON.parse(options.body),{numbers:[target]});return{ok:true,json:async()=>[{number:target,jid:sender+'@s.whatsapp.net',exists:true}]};};
+ const result=await resolveConsent(event,rpc,cfg,http);assert.equal(result.phone,target);assert.equal(result.sender_phone,sender);assert.equal(result.verification,'evolution_on_whatsapp');
+ for(const record of [{number:target,jid:'555199991112@s.whatsapp.net',exists:true},{number:target,jid:sender+'@s.whatsapp.net',exists:false}])assert.equal((await resolveConsent(event,rpc,cfg,async()=>({ok:true,json:async()=>[record]}))).phone,sender);
+ await assert.rejects(()=>resolveConsent(event,rpc,cfg,async()=>{throw Error('offline');}));
+});
 function journal(value=null){return{async load(){return value;},async save(v){value=v;}};}
 test('envio exige ambas as autorizações locais e loja exata',()=>{
  assert.equal(cfg.sendEnabled,false);assert.equal(configuration({...env,MARKETING_SEND_ENABLED:'true'}).sendEnabled,false);

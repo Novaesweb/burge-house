@@ -9,7 +9,10 @@ export type MarketingDashboard = {
 export type MarketingJob={id:string;phone:string;text:string;state:string;provider_id:string|null;result_code:string|null;finished_at:string|null};
 export async function marketingAdmin<T>(storeId:string,operation:string,args:Record<string,unknown>={}):Promise<T>{
  const {data,error}=await requireSupabase().rpc('bh_marketing_admin',{p_store_id:storeId,p_operation:operation,p_args:args});
- if(error)throw new Error('Não foi possível acessar o marketing. Confira a instalação e sua permissão de dono ou administrador.');
+ if(error){
+  if(error.message?.includes('NO_CONFIRMED_RECIPIENTS'))throw new Error('Nenhum cliente com confirmação concluída atende a este público. Aguarde a confirmação no WhatsApp e prepare uma nova campanha.');
+  throw new Error('Não foi possível acessar o marketing. Confira a instalação e sua permissão de dono ou administrador.');
+ }
  return data as T;
 }
 export async function requestMarketingConsent(storeId:string,orderId:string):Promise<{state:string;challenge?:string;phone?:string}>{
