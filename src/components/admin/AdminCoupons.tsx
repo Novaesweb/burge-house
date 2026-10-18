@@ -72,7 +72,7 @@ export const AdminCoupons: React.FC = () => {
       <button disabled={saving} className="sm:col-span-2 rounded-xl bg-red-600 p-3 font-black disabled:opacity-50">{saving ? 'Salvando...' : 'Cadastrar cupom'}</button>
     </form>
     <div className="space-y-2">{coupons.map(c => <div key={c.code} className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 flex items-center justify-between gap-3">
-      <div><strong>{c.code}</strong><p className="text-sm text-neutral-400">{c.discount_type === 'percent' ? c.discount_value + '%' : 'R$ ' + c.discount_value.toFixed(2)} de desconto · Mínimo R$ {Number(c.min_order).toFixed(2)} · {c.used_count} usos</p></div>
+      <div><strong>{c.code}</strong><p className="text-sm text-neutral-400">{c.discount_type === 'percent' ? c.discount_value + '%' : 'R$ ' + Number(c.discount_value).toFixed(2)} de desconto · Mínimo R$ {Number(c.min_order).toFixed(2)} · {c.used_count} usos</p></div>
       <button type="button" onClick={() => void toggleCoupon(c)} className={'rounded-lg px-3 py-2 font-bold ' + (c.active ? 'bg-green-800' : 'bg-neutral-700')}>{c.active ? 'Ativo' : 'Inativo'}</button>
     </div>)}{coupons.length === 0 && <p className="text-neutral-400">Nenhum cupom cadastrado.</p>}</div>
   </section>;
