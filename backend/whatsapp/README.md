@@ -19,13 +19,13 @@ O arquivo privado `.env` fica apenas na pasta do serviço, protegido para a cont
 
 O padrão de `.env.example` mantém envios desligados e modo de teste. O modo de clientes só é ativado por `WHATSAPP_SEND_ENABLED=true`, `WHATSAPP_TEST_ONLY=false` e `WHATSAPP_CUSTOMER_SEND_APPROVED=true`. O notebook instalado usa esse modo após autorização explícita. O modo de teste exige o telefone autorizado e bloqueia qualquer outro destinatário. Telefones brasileiros com DDD são normalizados para incluir 55; telefones inválidos são bloqueados.
 
-Cada alteração real de status gera um aviso: recebido, preparando, itens separados, esperando motoboy, saiu para entrega, entregue ou cancelado. Inserir um pedido em `recebido` não dispara mensagem inicial; a automação solicitada observa mudanças de status. Alterações de pagamento e repetição do mesmo status não geram avisos. Não há envio retroativo de pedidos anteriores à ativação.
+Somente mudanças para `preparando`, `saiu_para_entrega` e `entregue` geram avisos: em preparo, a caminho e entregue. Os demais status continuam disponíveis no painel sem notificação por WhatsApp. Inserir um pedido em `recebido` não dispara mensagem inicial. Alterações de pagamento e repetição do mesmo status não geram avisos. Não há envio retroativo de pedidos anteriores à ativação. O banco filtra a fila e o worker também bloqueia outros status.
 
 Contrato Evolution instalado: POST `/message/sendText/{instance}`, cabeçalho `apikey`, JSON `{number,text,linkPreview:false}`. A URL aceita HTTPS ou HTTP de loopback; não expor a API local na internet.
 
 ## Verificação
 
-`node --test --test-isolation=none tests/whatsapp.mjs`: 10 testes locais com banco PostgreSQL embarcado e HTTP simulado. Cobrem modo de teste, autorização do modo de clientes, isolamento de loja, proteção do token, fila transacional, ordem, recuperação de resposta perdida e tratamento de falhas. As verificações existentes de banco, tipos e compilação também passaram.
+`node --test --test-isolation=none tests/whatsapp.mjs`: 11 testes locais com banco PostgreSQL embarcado e HTTP simulado. Cobrem modo de teste, autorização do modo de clientes, isolamento de loja, proteção do token, fila transacional, ordem, recuperação de resposta perdida e tratamento de falhas. As verificações existentes de banco, tipos e compilação também passaram.
 
 O único teste real autorizado foi o pedido temporário #4, evento 1, enviado apenas ao número terminado em 2414. Resultado: fila `sent/ACCEPTED`; consulta somente de leitura na Evolution confirmou `SERVER_ACK` e `DELIVERY_ACK`. O pedido temporário foi removido por ID e marcador exclusivos após a verificação, sem alterar pedidos reais. Nenhum outro destinatário foi usado nos testes.
 
@@ -44,3 +44,4 @@ Para pausar completamente a coleta, desabilitar a loja em `delivery_private.what
 Advisors após instalação: as novas tabelas privadas têm RLS sem políticas e sem acesso direto de clientes, intencionalmente. Os avisos de função pública de disponibilidade e proteção de senhas eram anteriores e não foram alterados.
 
 Documentação consultada: https://supabase.com/docs/guides/functions/schedule-functions e https://supabase.com/docs/guides/database/extensions/pg_net. A fila persistente e o worker dispensam URL pública para a Evolution local.
+

@@ -43,6 +43,16 @@ test('allowlist and store isolation block before HTTP',async()=>{
   for(const e of [{...event,phone:'5511000000000'},{...event,phone:''},{...event,store_id:other},{...event,status:'unknown'}])
     assert.equal((await deliver(e,cfg,noNetwork)).state,'blocked');
 });
+test('only preparing, out for delivery and delivered generate messages',async()=>{
+  let calls=0;
+  const request=async()=>{calls++;return {ok:true,json:async()=>({key:{id:'mock'}})};};
+  for(const status of ['recebido','itens_separados','esperando_motoboy','cancelado'])
+    assert.equal((await deliver({...event,status},cfg,request)).state,'blocked');
+  assert.equal(calls,0);
+  for(const status of ['preparando','saiu_para_entrega','entregue'])
+    assert.equal((await deliver({...event,status},cfg,request)).state,'sent');
+  assert.equal(calls,3);
+});
 test('Evolution contract, normalized number, secret only in server header',async()=>{
   let calls=0;
   const result=await deliver({...event,phone:'5194892414'},cfg,async(url,options)=>{
@@ -135,5 +145,16 @@ test('transactional queue, permissions, ordering and repeated status transitions
     await assert.rejects(()=>recover('wrong'));
     for(let i=0;i<2;i++)await db.query("select delivery_finish_whatsapp($1,$2,$3,'sent','ACCEPTED')",[store,token,recovered.id]);
     assert.equal((await recover())[0].state,'sent');
+    await db.exec('reset role');
+    await db.exec(await readFile(new URL('../backend/whatsapp/notification-statuses.sql',import.meta.url),'utf8'));
+    const before=await count();
+    for(const status of ['recebido','itens_separados','esperando_motoboy','cancelado'])
+      await db.query('update delivery_orders set status=$1',[status]);
+    assert.equal(await count(),before);
+    for(const status of ['preparando','saiu_para_entrega','entregue'])
+      await db.query('update delivery_orders set status=$1',[status]);
+    assert.equal(await count(),before+3);
+    await db.exec("update delivery_orders set status='entregue'");
+    assert.equal(await count(),before+3);
   } finally {await db.close();}
 });

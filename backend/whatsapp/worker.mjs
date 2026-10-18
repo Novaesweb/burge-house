@@ -4,9 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const labels = {
-  recebido:'recebido', preparando:'em preparo', itens_separados:'com os itens separados',
-  esperando_motoboy:'aguardando o entregador', saiu_para_entrega:'a caminho',
-  entregue:'entregue', cancelado:'cancelado',
+  preparando:'em preparo', saiu_para_entrega:'a caminho', entregue:'entregue',
 };
 export function phone(value) {
   let number=String(value ?? '').replace(/\D/g,'');
