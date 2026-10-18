@@ -30,6 +30,9 @@ export const CheckoutView: React.FC = () => {
 
   const [name, setName] = useState(() => localStorage.getItem('customer_saved_name') || '');
   const [phone, setPhone] = useState(() => localStorage.getItem('customer_saved_phone') || '');
+  const [cep, setCep] = useState(() => localStorage.getItem('customer_saved_cep') || '');
+  const [cepMessage, setCepMessage] = useState('');
+  const [cepLoading, setCepLoading] = useState(false);
   const [street, setStreet] = useState(() => localStorage.getItem('customer_saved_street') || '');
   const [number, setNumber] = useState(() => localStorage.getItem('customer_saved_number') || '');
   const [complement, setComplement] = useState(() => localStorage.getItem('customer_saved_complement') || '');
@@ -48,6 +51,25 @@ export const CheckoutView: React.FC = () => {
   useEffect(() => {
     if (!acceptedMethods.includes(paymentMethod)) setPaymentMethod(acceptedMethods[0] || 'cash');
   }, [acceptedMethods, paymentMethod]);
+
+  const lookupCep = async (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length !== 8) { setCepMessage('Informe um CEP com 8 dígitos.'); return; }
+    setCepLoading(true);
+    setCepMessage('');
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      if (!response.ok) throw new Error('Consulta indisponível');
+      const data = await response.json();
+      if (data.erro) { setCepMessage('CEP não encontrado. Digite o endereço manualmente.'); return; }
+      if (data.logradouro) setStreet(data.logradouro);
+      if (data.bairro) setNeighborhood(data.bairro);
+      setIsEditingAddress(true);
+      setCepMessage(`Endereço encontrado: ${data.localidade || ''} / ${data.uf || ''}. Confira os dados.`);
+    } catch {
+      setCepMessage('Não foi possível consultar o CEP. Preencha o endereço manualmente.');
+    } finally { setCepLoading(false); }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +95,7 @@ export const CheckoutView: React.FC = () => {
       setErrorMsg('');
 
       // Save user input for future orders
+      localStorage.setItem('customer_saved_cep', cep);
       localStorage.setItem('customer_saved_name', name.trim());
       localStorage.setItem('customer_saved_phone', phone.trim());
       localStorage.setItem('customer_saved_street', street.trim());
@@ -221,6 +244,21 @@ export const CheckoutView: React.FC = () => {
               {/* Editable Address Grid */}
               {isEditingAddress && (
                 <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="col-span-2">
+                    <label className="text-xs font-bold text-neutral-400 block mb-1">CEP (busca ViaCEP)</label>
+                    <div className="flex gap-2">
+                      <input inputMode="numeric" autoComplete="postal-code" value={cep} maxLength={9}
+                        onChange={(e) => { const digits=e.target.value.replace(/\D/g,'').slice(0,8); setCep(digits.replace(/^(\d{5})(\d)/,'$1-$2')); setCepMessage(''); }}
+                        onBlur={() => { if (cep.replace(/\D/g,'').length===8) void lookupCep(cep); }}
+                        placeholder="00000-000"
+                        className="min-w-0 flex-1 text-base p-3 rounded-xl bg-black border border-neutral-800 text-white" />
+                      <button type="button" disabled={cepLoading} onClick={() => void lookupCep(cep)}
+                        className="px-4 rounded-xl bg-red-600 text-white font-bold disabled:opacity-50">
+                        {cepLoading ? 'Buscando...' : 'Buscar'}
+                      </button>
+                    </div>
+                    {cepMessage && <p role="status" className="text-xs text-neutral-300 mt-2">{cepMessage}</p>}
+                  </div>
                   <div className="col-span-2">
                     <label className="text-xs font-bold text-neutral-400 block mb-1">
                       Rua / Avenida
