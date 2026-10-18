@@ -7,7 +7,6 @@ export type LegalPageKind = 'privacy' | 'terms';
 export const LegalPage: React.FC<{ kind: LegalPageKind; onBack: () => void }> = ({ kind, onBack }) => {
   const { siteSettings } = useStore();
   const name = siteSettings.name || 'a loja';
-  const contact = siteSettings.phone?.trim();
   return (
     <article className="mx-auto max-w-2xl space-y-5 text-sm leading-relaxed text-neutral-300">
       <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-2 text-white"><ArrowLeft size={16}/> Voltar ao site</button>
