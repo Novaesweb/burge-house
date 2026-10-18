@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 
 export const BottomNav: React.FC = () => {
   const { customerView, setCustomerView, cartCount } = useStore();
+  const whatsappMode = window.location.pathname.startsWith('/whatsapp') || window.location.hash.startsWith('#/whatsapp');
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-md border-t border-neutral-850 text-neutral-400 py-2.5 px-4 shadow-2xl">
@@ -44,7 +45,7 @@ export const BottomNav: React.FC = () => {
         </button>
 
         {/* Pedidos */}
-        <button
+        {!whatsappMode && <button
           onClick={() => setCustomerView('my-orders')}
           className={`flex flex-col items-center gap-1 py-1.5 px-5 rounded-2xl transition-all ${
             customerView === 'my-orders' ||
@@ -57,7 +58,7 @@ export const BottomNav: React.FC = () => {
         >
           <Receipt className="w-6 h-6 stroke-[2.5]" />
           <span className="text-xs font-bold tracking-tight">Pedidos</span>
-        </button>
+        </button>}
       </div>
     </nav>
   );
