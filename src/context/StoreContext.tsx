@@ -73,7 +73,8 @@ export type AdminView =
   | 'reports'
   | 'reviews'
   | 'settings'
-  | 'support';
+  | 'support'
+  | 'extras';
 
 interface StoreContextType {
   siteId: string;
@@ -158,6 +159,8 @@ interface StoreContextType {
     paymentChange?: string;
     notes?: string;
   }) => Promise<Order>;
+
+  createManualOrderAction: (order: Omit<Order,'id'|'orderNumber'|'createdAt'|'updatedAt'>) => Promise<Order>;
 
   // Admin actions & local ADM Identification
   adminId: string;
@@ -509,6 +512,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newOrder;
   };
 
+  const createManualOrderAction = async (order: Omit<Order,'id'|'orderNumber'|'createdAt'|'updatedAt'>) => {
+    if (!isOwnerAuthenticated) throw new Error('Entre no painel para cadastrar pedidos.');
+    const created = await createOrder(siteId, order);
+    setOrders(prev => [created,...prev.filter(item=>item.id!==created.id)]);
+    return created;
+  };
+
   // Change order status from Store Admin
   const changeOrderStatus = async (
     orderId: string,
@@ -605,6 +615,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         sendSupportMessageAction,
         manualPayments,
         addManualPaymentAction,
+        createManualOrderAction,
         deleteManualPaymentAction,
         selectedCategoryId,
         setSelectedCategoryId,
