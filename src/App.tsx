@@ -104,12 +104,12 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
       <AudioNotificationBanner />
       <CartToastNotification />
       {/* Responsive Container: Full width on mobile, centered modern card on desktop */}
-      <div className="burger-house-content w-full max-w-md md:max-w-3xl lg:max-w-5xl min-h-screen md:border-x md:border-neutral-900 flex flex-col relative pb-24 md:pb-16 shadow-2xl">
+      <div className="burger-house-content w-full max-w-none min-h-screen flex flex-col relative pb-24 md:pb-16 shadow-2xl">
         {/* Sticky Header */}
         <Header />
 
         {/* Customer Screens Router */}
-        <main className="flex-1 px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
+        <main className="flex-1 w-full px-3 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 py-3 sm:py-6 lg:py-8">
           {legalPage && <LegalPage kind={legalPage} onBack={() => { window.location.hash = '#/'; setLegalPage(null); setCustomerView('home'); }} />}
           {!legalPage && <>
           {/* SCREEN 1: HOME */}
