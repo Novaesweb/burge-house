@@ -1,4 +1,5 @@
 import { requireSupabase } from '../lib/supabase';
+import { isWithinOpeningHours } from '../utils/openingHours';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -30,20 +31,23 @@ export const CheckoutView: React.FC = () => {
   } = useStore();
 
   const customerKey = (phoneNumber: string) => `delivery:customer:${siteId}:${phoneNumber.replace(/\D/g,'')}`;
-  const [name, setName] = useState(() => localStorage.getItem('customer_saved_name') || '');
-  const [phone, setPhone] = useState(() => localStorage.getItem('customer_saved_phone') || '');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState(() => localStorage.getItem(`delivery:customer-phone:${siteId}`) || '');
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id=window.setInterval(()=>setNow(new Date()),30000);return()=>window.clearInterval(id); }, []);
+  const scheduleOpen = isWithinOpeningHours(siteSettings, now);
   const [couponInput, setCouponInput] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponFeedback, setCouponFeedback] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
-  const [cep, setCep] = useState(() => localStorage.getItem('customer_saved_cep') || '');
+  const [cep, setCep] = useState('');
   const [cepMessage, setCepMessage] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
-  const [street, setStreet] = useState(() => localStorage.getItem('customer_saved_street') || '');
-  const [number, setNumber] = useState(() => localStorage.getItem('customer_saved_number') || '');
-  const [complement, setComplement] = useState(() => localStorage.getItem('customer_saved_complement') || '');
-  const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem('customer_saved_neighborhood') || '');
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
   useEffect(() => {
     const digits=phone.replace(/\D/g,'');
     if (digits.length < 10) return;
@@ -110,6 +114,7 @@ export const CheckoutView: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
     if (!name.trim()) {
       setErrorMsg('Por favor informe seu nome.');
       return;
@@ -131,14 +136,15 @@ export const CheckoutView: React.FC = () => {
       setIsSubmitting(true);
       setErrorMsg('');
 
-      // Save user input for future orders
+      // Save profile only after a confirmed order.
+      /* local legacy profile is not shared between shops.
       localStorage.setItem('customer_saved_cep', cep);
       localStorage.setItem('customer_saved_name', name.trim());
       localStorage.setItem('customer_saved_phone', phone.trim());
       localStorage.setItem('customer_saved_street', street.trim());
       localStorage.setItem('customer_saved_number', number.trim());
       localStorage.setItem('customer_saved_complement', complement.trim());
-      localStorage.setItem('customer_saved_neighborhood', neighborhood.trim());
+      localStorage.setItem('customer_saved_neighborhood', neighborhood.trim()); */
 
       await handleCheckoutOrder({
         customerName: name,
@@ -506,7 +512,8 @@ export const CheckoutView: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || !isRemoteStore(siteId) || acceptedMethods.length === 0}
+            title={!scheduleOpen ? 'Loja fechada neste horário' : undefined}
+            disabled={isSubmitting || !scheduleOpen || !isRemoteStore(siteId) || acceptedMethods.length === 0}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/80 active:scale-98 transition-all flex items-center justify-center gap-3 disabled:opacity-60 cursor-pointer"
           >
             {isSubmitting ? (
