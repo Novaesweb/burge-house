@@ -1,101 +1,54 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Megaphone, Pause, Play, Send, ShieldCheck, WifiOff } from 'lucide-react';
-import { useStore } from '../../context/StoreContext';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {useStore} from '../../context/StoreContext';
+import {marketingAdmin,type MarketingDashboard,type MarketingJob,type MarketingCampaign} from '../../services/marketingService';
+import {AdminMarketingDemo} from './AdminMarketingDemo';
 
-type Segment = 'all' | '30' | '60' | '90';
-type Campaign = { id: string; title: string; original: string; segment: Segment; recipients: { name: string; phone: string; text: string; simulatedAt?: string }[]; status: 'running' | 'paused' | 'completed'; createdAt: string; nextBatchAt: number };
-const SAMPLE = [
-  { name: 'Ana', phone: 'TESTE-001', inactive: 100 }, { name: 'Bruno', phone: 'TESTE-002', inactive: 95 },
-  { name: 'Carla', phone: 'TESTE-003', inactive: 82 }, { name: 'Daniel', phone: 'TESTE-004', inactive: 75 },
-  { name: 'Elisa', phone: 'TESTE-005', inactive: 65 }, { name: 'Felipe', phone: 'TESTE-006', inactive: 61 },
-  { name: 'Gabriela', phone: 'TESTE-007', inactive: 56 }, { name: 'Hugo', phone: 'TESTE-008', inactive: 50 },
-  { name: 'Isabela', phone: 'TESTE-009', inactive: 42 }, { name: 'João', phone: 'TESTE-010', inactive: 38 },
-  { name: 'Karen', phone: 'TESTE-011', inactive: 34 }, { name: 'Leonardo', phone: 'TESTE-012', inactive: 31 },
-  { name: 'Marina', phone: 'TESTE-013', inactive: 20 }, { name: 'Nicolas', phone: 'TESTE-014', inactive: 12 },
-];
-const intros = [
-  (name: string) => `Olá, ${name}! 🍔`,
-  (name: string) => `Oi, ${name}! 😋`,
-  (name: string) => `Tudo bem, ${name}? 🍟`,
-  (name: string) => `Ei, ${name}! 👋`,
-  (name: string) => `Boa notícia, ${name}! 🍔`,
-  (name: string) => `Olá, ${name}, confira esta novidade! ✨`,
-];
-const INTERVAL = 5 * 60 * 1000;
-const BATCH = 6;
-
-export const AdminMarketing: React.FC = () => {
-  const { siteId } = useStore();
-  const storageKey = `novaesweb-marketing-demo:${siteId}`;
-  const [title, setTitle] = useState('Promoção especial Burger House');
-  const [message, setMessage] = useState('Hoje temos hambúrguer com batata por R$ 29,90. Confira a promoção! Se não quiser mais receber novidades, responda SAIR.');
-  const [segment, setSegment] = useState<Segment>('all');
-  const [selected, setSelected] = useState<string[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [ready, setReady] = useState(false);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    setReady(false);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      setCampaigns(Array.isArray(parsed) ? parsed : []);
-    } catch { setCampaigns([]); }
-    setSelected([]);
-    setReady(true);
-  }, [storageKey]);
-  useEffect(() => {
-    if (ready) try { localStorage.setItem(storageKey, JSON.stringify(campaigns)); } catch { /* unavailable storage */ }
-  }, [campaigns, ready, storageKey]);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  // Local simulation only. No WhatsApp credentials, HTTP requests or real dispatch.
-  useEffect(() => {
-    if (!ready) return;
-    setCampaigns(previous => previous.map(campaign => {
-      if (campaign.status !== 'running' || campaign.nextBatchAt > now) return campaign;
-      const pending = campaign.recipients.filter(recipient => !recipient.simulatedAt);
-      if (!pending.length) return { ...campaign, status: 'completed' };
-      const ids = new Set(pending.slice(0, BATCH).map(recipient => recipient.phone));
-      const recipients = campaign.recipients.map(recipient => ids.has(recipient.phone) ? { ...recipient, simulatedAt: new Date(now).toISOString() } : recipient);
-      return { ...campaign, recipients, status: recipients.every(recipient => recipient.simulatedAt) ? 'completed' : 'running', nextBatchAt: now + INTERVAL };
-    }));
-  }, [now, ready]);
-  const filtered = useMemo(() => SAMPLE.filter(c => segment === 'all' || c.inactive >= Number(segment)), [segment]);
-  const recipients = filtered.filter(c => selected.includes(c.phone));
-  const start = () => {
-    if (!message.trim() || !title.trim() || !recipients.length) return;
-    const createdAt = new Date().toISOString();
-    setCampaigns(prev => [{
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      title: title.trim(), original: message.trim(), segment,
-      recipients: recipients.map((c, i) => ({ name: c.name, phone: c.phone, text: `${intros[i % intros.length](c.name)} ${message.trim()}` })),
-      status: 'running', createdAt, nextBatchAt: Date.now(),
-    }, ...prev]);
-  };
-  const changeStatus = (id: string, status: 'running' | 'paused') => setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status, nextBatchAt: status === 'running' ? Date.now() + INTERVAL : c.nextBatchAt } : c));
-  return <div className="space-y-5 text-white">
-    <header className="space-y-1"><h1 className="text-2xl font-black flex items-center gap-2"><Megaphone className="text-rose-400"/> Central de Marketing</h1><p className="text-sm text-neutral-400">Demonstração de campanhas WhatsApp da NovaesWeb</p></header>
-    <div className="rounded-2xl border border-amber-700/70 bg-amber-950/30 p-4 text-sm text-amber-100 space-y-2">
-      <p className="font-bold flex items-center gap-2"><WifiOff size={18}/> Modo simulação — nenhum WhatsApp será enviado</p>
-      <p>Os contatos abaixo são fictícios e não vêm do cadastro real de clientes. A simulação acontece neste navegador; para envios automáticos reais, será necessário um serviço no servidor, conexão autorizada e registro de consentimento para marketing.</p>
-      <p>Enviar em lotes não evita bloqueios. A conexão Evolution API ainda não está configurada.</p>
-    </div>
-    <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 sm:p-6 space-y-4">
-      <h2 className="font-extrabold text-lg">Nova campanha</h2>
-      <label className="block text-sm space-y-1"><span>Nome da campanha</span><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={90} className="w-full rounded-xl bg-neutral-950 border border-neutral-700 p-3 text-white"/></label>
-      <label className="block text-sm space-y-1"><span>Mensagem principal</span><textarea value={message} onChange={e=>setMessage(e.target.value)} rows={4} maxLength={1000} className="w-full rounded-xl bg-neutral-950 border border-neutral-700 p-3 text-white"/></label>
-      <p className="text-xs text-neutral-400">A saudação varia por destinatário; a oferta e o preço são preservados. Revise a mensagem antes de iniciar.</p>
-      <label className="block text-sm space-y-1"><span>Selecionar clientes fictícios</span><select value={segment} onChange={e=>{setSegment(e.target.value as Segment);setSelected([]);}} className="w-full rounded-xl bg-neutral-950 border border-neutral-700 p-3 text-white"><option value="all">Todos os contatos de demonstração</option><option value="30">Sem comprar há 30+ dias</option><option value="60">Sem comprar há 60+ dias</option><option value="90">Sem comprar há 90+ dias</option></select></label>
-      <div className="flex flex-wrap gap-2 items-center justify-between text-xs text-neutral-300"><span>{selected.length} de {filtered.length} selecionados</span><button type="button" className="rounded-lg border border-neutral-600 px-3 py-2 hover:bg-neutral-800" onClick={()=>setSelected(selected.length===filtered.length?[]:filtered.map(c=>c.phone))}>{selected.length===filtered.length?'Desmarcar todos':'Selecionar todos'}</button></div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">{filtered.map(c=><label key={c.phone} className="flex gap-2 items-center rounded-xl bg-neutral-950 border border-neutral-800 p-3 text-sm cursor-pointer"><input type="checkbox" checked={selected.includes(c.phone)} onChange={e=>setSelected(prev=>e.target.checked?[...prev,c.phone]:prev.filter(p=>p!==c.phone))}/><span>{c.name} <small className="block text-neutral-500">{c.inactive} dias sem pedidos · fictício</small></span></label>)}</div>
-      {recipients.length>0 && <div className="rounded-xl border border-neutral-700 bg-neutral-950 p-3 space-y-2"><h3 className="font-bold text-sm">Prévia individual ({recipients.length})</h3><div className="max-h-48 overflow-y-auto space-y-2">{recipients.map((c,i)=><p key={c.phone} className="text-xs text-neutral-300 border-b border-neutral-800 pb-2"><strong>{c.name}:</strong> {intros[i%intros.length](c.name)} {message}</p>)}</div></div>}
-      <div className="flex flex-wrap gap-3 items-center justify-between"><p className="text-sm text-neutral-400"><strong className="text-white">6 por lote</strong> · intervalo de <strong className="text-white">5 minutos</strong></p><button type="button" onClick={start} disabled={!recipients.length||!message.trim()||!title.trim()} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-3 font-bold text-white disabled:opacity-40"><Send size={17}/> Iniciar simulação</button></div>
-    </section>
-    <section className="space-y-3"><h2 className="text-lg font-extrabold">Histórico de campanhas neste navegador</h2>{!campaigns.length&&<p className="text-neutral-400 text-sm">Nenhuma campanha simulada ainda.</p>}
-      {campaigns.map(c=>{const done=c.recipients.filter(r=>r.simulatedAt).length;const remaining=Math.max(0,Math.ceil((c.nextBatchAt-now)/1000));return <article key={c.id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 space-y-3"><div className="flex flex-wrap justify-between gap-2"><div><h3 className="font-bold">{c.title}</h3><p className="text-xs text-neutral-400">{new Date(c.createdAt).toLocaleString('pt-BR')} · {done}/{c.recipients.length} simulados</p></div><span className="text-xs text-amber-300 font-semibold">{c.status==='completed'?'Concluída':c.status==='paused'?'Pausada':'Simulando'}</span></div><div className="w-full h-2 rounded-full bg-neutral-700 overflow-hidden"><div className="bg-rose-500 h-full" style={{width:`${done/c.recipients.length*100}%`}}/></div>{c.status==='running'&&<p className="text-xs text-neutral-400">{done===0?'Próximo lote: agora':`Próximo lote em ${Math.floor(remaining/60)}m ${String(remaining%60).padStart(2,'0')}s`}</p>}<div className="flex flex-wrap gap-2">{c.status==='running'&&<button className="rounded-lg border border-neutral-600 px-3 py-2 text-sm flex gap-1 items-center" onClick={()=>changeStatus(c.id,'paused')}><Pause size={15}/> Pausar</button>}{c.status==='paused'&&<button className="rounded-lg border border-neutral-600 px-3 py-2 text-sm flex gap-1 items-center" onClick={()=>changeStatus(c.id,'running')}><Play size={15}/> Continuar</button>}</div><details className="text-xs text-neutral-300"><summary className="cursor-pointer flex items-center gap-1"><ShieldCheck size={14}/> Ver mensagens simuladas</summary><div className="space-y-2 mt-3">{c.recipients.map(r=><p key={r.phone} className="border-t border-neutral-800 pt-2"><strong>{r.name} — {r.simulatedAt?'Simulada':'Pendente'}:</strong> {r.text}</p>)}</div></details></article>})}
-    </section>
-    <section className="rounded-2xl border border-neutral-800 p-4 text-sm text-neutral-300 space-y-2"><h2 className="text-white font-bold">Conexão WhatsApp — próxima etapa no notebook</h2><p>Integração real desativada. Para ativar com segurança: configurar serviço de envio no servidor, credenciais protegidas, fila persistente, autorização para promoções, descadastro e limites do provedor. Nenhuma chave da Evolution API deve ser colocada no navegador.</p></section>
-  </div>;
+const labels:Record<string,string>={draft:'Rascunho — sem envio',approved:'Aprovada',paused:'Pausada',completed:'Concluída',cancelled:'Cancelada',pending:'Na fila',claimed:'Reservada',sending:'Em processamento',accepted:'Aceita pela API',uncertain:'Revisão necessária',suppressed:'Suprimida',opted_in:'Consentimento confirmado',unsubscribed:'Cancelado'};
+const button='rounded-xl border border-neutral-700 px-4 py-3 font-bold text-sm disabled:opacity-40';
+export const AdminMarketing:React.FC=()=>{
+ const {siteId}=useStore();
+ const [tab,setTab]=useState<'real'|'demo'>('real');
+ return <div className="space-y-5"><div className="flex flex-wrap gap-2" aria-label="Modo de marketing"><button aria-pressed={tab==='real'} className={button} onClick={()=>setTab('real')}>Integração real</button><button aria-pressed={tab==='demo'} className={button} onClick={()=>setTab('demo')}>Demonstração</button></div>{tab==='demo'?<AdminMarketingDemo key={siteId}/>:<RealMarketing key={siteId}/>}</div>;
 };
+function RealMarketing(){
+ const {siteId}=useStore();
+ const [data,setData]=useState<MarketingDashboard|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const [title,setTitle]=useState(''),[body,setBody]=useState(''),[segment,setSegment]=useState(0);
+ const [details,setDetails]=useState<{id:string;jobs:MarketingJob[]}|null>(null);
+ const requestId=useRef<string|null>(null),generation=useRef(0);
+ const load=useCallback(async()=>{
+  const gen=generation.current;
+  try{const result=await marketingAdmin<MarketingDashboard>(siteId,'dashboard');if(gen===generation.current){setData(result);setError('');}}
+  catch(e){if(gen===generation.current)setError((e as Error).message);}
+ },[siteId]);
+ useEffect(()=>{generation.current++;setData(null);setDetails(null);requestId.current=null;void load();const timer=window.setInterval(()=>void load(),15000);return()=>{generation.current++;window.clearInterval(timer);};},[load]);
+ async function act(operation:string,args:Record<string,unknown>){
+  setBusy(true);setError('');try{await marketingAdmin(siteId,operation,args);await load();}catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ function prepare(){requestId.current??=crypto.randomUUID();void act('prepare',{request_id:requestId.current,title,body,segment});}
+ async function show(campaign:MarketingCampaign){
+  const gen=generation.current;setBusy(true);
+  try{const jobs=await marketingAdmin<MarketingJob[]>(siteId,'details',{id:campaign.id});if(gen===generation.current)setDetails({id:campaign.id,jobs});}catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ function approve(c:MarketingCampaign){
+  const count=Object.values(c.counts).reduce((sum,n)=>sum+n,0);
+  if(window.confirm(`Autorizar mensagens reais para os ${count} destinatários desta campanha? Confira a prévia completa antes de confirmar.`))void act('approve',{id:c.id,body:c.body,count});
+ }
+ return <div className="space-y-5 text-white">
+  <header><h1 className="text-2xl font-black">Central de Marketing</h1><p className="text-neutral-400 mt-1">Campanhas, autorizações e histórico desta loja</p></header>
+  <div className="rounded-2xl border border-amber-700 bg-amber-950/30 p-4 space-y-2 text-sm text-amber-100"><strong>{data?.settings?.enabled?'Envio liberado no servidor — cada campanha exige aprovação':'Envio real bloqueado'}</strong><p>Preparar uma campanha não envia mensagens. A conexão, a liberação do serviço e a aprovação da campanha são verificadas no servidor.</p><p>Somente clientes que confirmaram promoções no próprio WhatsApp entram na fila. Compra e avisos do pedido não autorizam marketing.</p><p>Serviço: {data?.settings?.heartbeat_at?new Date(data.settings.heartbeat_at).toLocaleString('pt-BR'):'ainda sem comunicação registrada'}. Aceitação pela API não comprova entrega ou leitura.</p></div>
+  {error&&<p role="alert" className="rounded-xl border border-red-800 p-4 text-red-200">{error}</p>}
+  {!data?.settings&&<p className="text-sm text-neutral-400">A instalação segura do servidor ainda precisa ser concluída e autorizada. A demonstração continua disponível na outra aba.</p>}
+  <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 space-y-3"><h2 className="text-lg font-bold">Preparar campanha sem enviar</h2>
+   <label className="block">Nome<input className="block w-full rounded-xl bg-black p-3 mt-1" value={title} maxLength={90} onChange={e=>{setTitle(e.target.value);requestId.current=null;}}/></label>
+   <label className="block">Mensagem<textarea className="block w-full rounded-xl bg-black p-3 mt-1" rows={5} value={body} maxLength={1000} onChange={e=>{setBody(e.target.value);requestId.current=null;}}/></label>
+   <p className="text-xs text-neutral-400">A mensagem será preservada e receberá instruções e link de cancelamento individual.</p>
+   <label className="block">Público autorizado<select className="block w-full rounded-xl bg-black p-3 mt-1" value={segment} onChange={e=>{setSegment(Number(e.target.value));requestId.current=null;}}><option value={0}>Todos com consentimento confirmado</option>{[30,60,90].map(n=><option key={n} value={n}>Última compra há {n}+ dias</option>)}</select></label>
+   <button className={button+' bg-red-700'} disabled={busy||!data?.settings||!title.trim()||!body.trim()} onClick={prepare}>Preparar fila (sem enviar)</button>
+   <p className="text-xs text-neutral-400">Limite no servidor: 6 mensagens por 5 minutos. Não há garantia contra bloqueios do provedor.</p>
+  </section>
+  <section className="space-y-3"><h2 className="font-bold text-lg">Autorizações ({data?.contacts.filter(c=>c.state==='opted_in').length||0} confirmadas)</h2><div className="max-h-60 overflow-auto space-y-2">{data?.contacts.map(c=><p key={c.phone} className="rounded-xl bg-neutral-900 p-3 text-sm">{c.name} · {c.phone} · {labels[c.state]||'Aguardando confirmação'}</p>)}</div></section>
+  <section className="space-y-3"><h2 className="font-bold text-lg">Campanhas persistidas</h2>{data?.campaigns.map(c=><article key={c.id} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 space-y-3"><h3 className="font-bold">{c.title} · {labels[c.state]}</h3><p className="whitespace-pre-wrap break-words text-sm">{c.body}</p><div className="flex flex-wrap gap-3 text-xs">{Object.entries(c.counts).map(([state,count])=><span key={state}>{labels[state]}: {count}</span>)}</div><div className="flex flex-wrap gap-2"><button disabled={busy} className={button} onClick={()=>void show(c)}>Ver mensagens e histórico</button>{c.state==='approved'&&<button disabled={busy} className={button} onClick={()=>void act('pause',{id:c.id})}>Pausar</button>}{['draft','paused'].includes(c.state)&&data.settings?.enabled&&details?.id===c.id&&<button disabled={busy} className={button} onClick={()=>approve(c)}>Aprovar envio real</button>}{!['completed','cancelled'].includes(c.state)&&<button disabled={busy} className={button} onClick={()=>void act('cancel',{id:c.id})}>Cancelar campanha</button>}</div>{details?.id===c.id&&<div className="max-h-80 overflow-auto space-y-3">{details.jobs.map(j=><div key={j.id} className="border-t border-neutral-700 pt-3 text-xs"><p>{j.phone} · {labels[j.state]} {j.result_code&&`· ${j.result_code}`}</p><p className="whitespace-pre-wrap break-words mt-2">{j.text}</p>{j.provider_id&&<p>Protocolo da API: {j.provider_id}</p>}</div>)}</div>}</article>)}</section>
+  <section className="space-y-2"><h2 className="font-bold">Últimos eventos</h2>{data?.events.map(e=><p key={e.id} className="text-xs text-neutral-400 break-words">{new Date(e.created_at).toLocaleString('pt-BR')} · {e.kind} · {e.entity}</p>)}</section>
+ </div>;
+}

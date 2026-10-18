@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 supabase/.temp/
+**/.marketing-claim.json*
+**/.marketing.lock
+provision-after-approval.sql
