@@ -54,6 +54,8 @@ export interface SiteSettings {
   bannerUrl: string;
   customerNotice?: string;
   customerNoticeEnabled?: boolean;
+  upsellEnabled?: boolean;
+  upsellProductIds?: string[];
   primaryColor: string;
   acceptedPaymentMethods: PaymentMethod[];
   ownerPin?: string;
