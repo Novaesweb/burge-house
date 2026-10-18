@@ -20,6 +20,7 @@ import { OrderStatus } from '../types';
 import { formatBRL } from '../utils/formatters';
 import { PixWhatsAppProofCard } from './PixWhatsAppProofCard';
 import { OrderRatingCard } from './OrderRatingCard';
+import { MarketingConsent } from './MarketingConsent';
 
 export const OrderStatusView: React.FC = () => {
   const {
@@ -391,6 +392,7 @@ export const OrderStatusView: React.FC = () => {
             </div>
           </div>
         )}
+        <MarketingConsent key={order.id} orderId={order.id} />
       </div>
     </div>
   );

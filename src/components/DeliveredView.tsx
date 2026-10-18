@@ -3,6 +3,7 @@ import { Check, ShoppingBag, History } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useStore } from '../context/StoreContext';
 import { OrderRatingCard } from './OrderRatingCard';
+import { MarketingConsent } from './MarketingConsent';
 
 export const DeliveredView: React.FC = () => {
   const { setCustomerView, activeOrder, orders } = useStore();
@@ -41,6 +42,7 @@ export const DeliveredView: React.FC = () => {
       {order && (
         <div className="w-full">
           <OrderRatingCard order={order} />
+          <MarketingConsent key={order.id} orderId={order.id} />
         </div>
       )}
 

@@ -9,6 +9,7 @@ import { CartView } from './components/CartView';
 import { CheckoutView } from './components/CheckoutView';
 import { OrderStatusView } from './components/OrderStatusView';
 import { DeliveredView } from './components/DeliveredView';
+import { MarketingUnsubscribe } from './components/MarketingUnsubscribe';
 import { CustomerOrdersView } from './components/CustomerOrdersView';
 import { BottomNav } from './components/BottomNav';
 import { Footer } from './components/Footer';
@@ -208,6 +209,11 @@ export default function App() {
       window.removeEventListener('hashchange', handleLocationChange);
     };
   }, []);
+
+  const marketingParams = new URLSearchParams(window.location.search);
+  if (marketingParams.has('marketing-unsubscribe')) {
+    return <MarketingUnsubscribe storeId={marketingParams.get('store') || ''} token={marketingParams.get('marketing-unsubscribe') || ''}/>;
+  }
 
   const isMaster =
     window.location.pathname.startsWith('/master') ||
