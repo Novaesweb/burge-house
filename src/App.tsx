@@ -32,6 +32,7 @@ import { AdminSales } from './components/admin/AdminSales';
 import { AdminReports } from './components/admin/AdminReports';
 import { AdminSettings } from './components/admin/AdminSettings';
 import { AdminSupport } from './components/admin/AdminSupport';
+import { AdminExtras } from './components/admin/AdminExtras';
 
 interface DeliveryAppContentProps {
   isAdmDonoRoute: boolean;
@@ -86,6 +87,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
         {adminView === 'reviews' && <AdminReviews />}
         {adminView === 'settings' && <AdminSettings />}
         {adminView === 'support' && <AdminSupport />}
+        {adminView === 'extras' && <AdminExtras />}
       </AdminLayout>
     );
   }
@@ -106,6 +108,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
           {customerView === 'home' && (
             <div className="space-y-4">
               <Banner />
+              {siteSettings.customerNoticeEnabled && !!siteSettings.customerNotice?.trim() && <div role="status" className="rounded-xl border border-amber-500/60 bg-amber-950/70 px-4 py-3 text-sm font-semibold text-amber-100">📢 {siteSettings.customerNotice}</div>}
 
               <div>
                 <div className="flex items-center justify-between mb-3 px-1">
