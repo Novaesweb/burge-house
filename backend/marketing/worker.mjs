@@ -72,24 +72,14 @@ export async function synchronize(rpc, cfg, request = fetch, clock = () => new D
   await verifyInstance(cfg, status.phone, request);
   const until = clock().toISOString();
   if (!Number.isFinite(Date.parse(status.cursor))) throw new Error('INVALID_INBOUND_CURSOR');
-  const records = [];
-  let expectedPages, expectedTotal;
-  for (let page = 1; ; page++) {
-    const result = await evolution(cfg, 'chat/findMessages', {
-      // Scan retained history, not a send-timestamp cursor: an offline client's
-      // SAIR may arrive today with a timestamp from yesterday.
-      where: {}, page, offset: 50,
-    }, request);
-    const messages = result?.messages;
-    if (!Array.isArray(messages?.records) || !Number.isInteger(messages.pages) || messages.pages < 0 || messages.pages > 200 || !Number.isInteger(messages.total) || messages.total < 0 || messages.pages !== Math.ceil(messages.total / 50)) throw new Error('INBOUND_RESPONSE_OR_BACKLOG');
-    // A changing result set cannot be certified as fully synchronized.
-    if (expectedPages !== undefined && (expectedPages !== messages.pages || expectedTotal !== messages.total)) throw new Error('INBOUND_CHANGED_RETRY');
-    expectedPages = messages.pages;
-    expectedTotal = messages.total;
-    records.push(...messages.records);
-    if (page >= messages.pages) break;
-  }
-  if (records.length !== expectedTotal || new Set(records.map(r => r.id)).size !== records.length) throw new Error('INBOUND_INCOMPLETE_RETRY');
+  // Evolution sorts only by second-resolution timestamps. Offset pagination can
+  // skip/duplicate rows tied in the same second. Read one bounded complete set.
+  // Include old timestamps: a customer's offline SAIR can arrive days later.
+  const result = await evolution(cfg, 'chat/findMessages', { where: {}, page: 1, offset: 10000 }, request);
+  const messages = result?.messages;
+  if (!Array.isArray(messages?.records) || !Number.isInteger(messages.total) || messages.total < 0 || messages.total > 10000 || messages.pages !== Math.ceil(messages.total / 10000)) throw new Error('INBOUND_RESPONSE_OR_BACKLOG');
+  const records = messages.records;
+  if (records.length !== messages.total || records.some(r => typeof r.id !== 'string' || !r.id) || new Set(records.map(r => r.id)).size !== records.length) throw new Error('INBOUND_INCOMPLETE_RETRY');
   const events = records.map(incoming).filter(Boolean).sort((a,b) => a.timestamp.localeCompare(b.timestamp) || (a.text.toUpperCase() === 'SAIR' ? 1 : -1));
   for (const event of events) await rpc('inbound', event);
   // Only advance after processing every page. Replay after failure is deduplicated in Postgres.
@@ -136,6 +126,11 @@ async function main() {
     const status = await rpc('status');
     await verifyInstance(cfg, status.phone);
     if (process.argv.includes('--check')) { console.log('MARKETING_CONFIGURATION_OK; sending=' + cfg.sendEnabled); return; }
+    if (process.argv.includes('--sync-only')) {
+      await synchronize(rpc, cfg);
+      console.log('MARKETING_INBOUND_SYNCHRONIZED; NO_OUTBOUND_MESSAGES');
+      return;
+    }
     const journal = fileJournal(fileURLToPath(new URL('./.marketing-claim.json', import.meta.url)));
     let stop = false;
     for (const signal of ['SIGINT','SIGTERM']) process.on(signal, () => { stop = true; });
@@ -149,5 +144,10 @@ async function main() {
   } finally { await lock.close(); await unlink(lockPath); }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main().catch(() => { console.error('MARKETING_STOPPED: confira conexão, configuração e histórico; nenhum reenvio automático.'); process.exitCode = 1; });
+  main().catch(error => {
+    const codes = new Set(['STORE_NOT_AUTHORIZED','INVALID_DATABASE_CONFIG','EVOLUTION_MUST_BE_LOOPBACK','INVALID_EVOLUTION_CONFIG','EVOLUTION_REQUEST_FAILED','INSTANCE_UNAVAILABLE','INSTANCE_BINDING_MISMATCH','UNRESOLVED_OPTOUT_REVIEW_REQUIRED','INVALID_INBOUND_CURSOR','INBOUND_RESPONSE_OR_BACKLOG','INBOUND_CHANGED_RETRY','INBOUND_INCOMPLETE_RETRY','DATABASE_STATUS_FAILED','DATABASE_INBOUND_FAILED','DATABASE_SYNCED_FAILED','DATABASE_CLAIM_FAILED','DATABASE_AUTHORIZE_FAILED','DATABASE_FINISH_FAILED']);
+    const code = codes.has(error?.message) ? error.message : error?.code === 'EEXIST' ? 'PROCESS_LOCK_REVIEW_REQUIRED' : 'UNEXPECTED_FAILURE';
+    console.error('MARKETING_STOPPED: ' + code + '; nenhum reenvio automático.');
+    process.exitCode = 1;
+  });
 }

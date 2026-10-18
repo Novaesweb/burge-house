@@ -28,6 +28,7 @@ O script confere a conexão por leitura, cria uma pasta protegida por ACL para u
 - Revisar e aplicar `supabase/migrations/20261018131153_marketing_consent_queue.sql`. A migração é aditiva, sem registros de loja. Aplicar depois o `provision-after-approval.sql` gerado exclusivamente para `e2ba2dff-0b92-497d-9b08-926c235c2934`, com envio `false`.
 - Publicar o frontend revisado. Conferir login, acesso da loja e link de cancelamento no domínio oficial antes de liberar qualquer campanha. Não alterar o `store_id` e não recriar tabelas existentes.
 - Executar `run.ps1 -Check` na instalação privada. Esse comando faz leituras da Evolution e atualiza apenas heartbeat do trabalhador. Executar `run.ps1` com flags padrão processa somente consentimentos e cancelamentos, **sem enviar**.
+- `run.ps1 -Synchronize` confere e sincroniza o histórico uma única vez, sem transmitir mensagens, inclusive quando a configuração de envio estiver liberada.
 - Teste real de envio exige confirmação do número de teste e autorização específica. Enquanto isso, testes usam somente mocks e banco em memória.
 - Somente após autorização explícita, habilitar `settings.enabled` apenas nessa loja e, na configuração privada, `MARKETING_SEND_ENABLED=true` e `MARKETING_ACTIVATION_CONFIRMED=<UUID oficial>`. Cada campanha ainda exige revisão e aprovação no painel. Não há botão público para habilitar a loja.
 

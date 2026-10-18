@@ -1,4 +1,4 @@
-param([switch]$Check)
+param([switch]$Check,[switch]$Synchronize)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $privateEnv = Join-Path $PSScriptRoot '.env'
@@ -12,7 +12,8 @@ if (!$env:EVOLUTION_KEY_FILE -or !(Test-Path -LiteralPath $env:EVOLUTION_KEY_FIL
 $env:EVOLUTION_API_KEY = (Get-Content -LiteralPath $env:EVOLUTION_KEY_FILE -Raw).Trim()
 try {
   $workerFile = Join-Path $PSScriptRoot 'worker.mjs'
-  if ($Check) { & node $workerFile --check } else { & node $workerFile }
+  if ($Check -and $Synchronize) { throw 'Escolha somente uma verificação por execução.' }
+  if ($Check) { & node $workerFile --check } elseif ($Synchronize) { & node $workerFile --sync-only } else { & node $workerFile }
   if ($LASTEXITCODE -ne 0) { throw 'Marketing interrompido. Verifique a configuração e o diário antes de reiniciar.' }
 } finally {
   Remove-Item Env:EVOLUTION_API_KEY -ErrorAction SilentlyContinue

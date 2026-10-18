@@ -38,16 +38,16 @@ test('reinício durante envio coloca em revisão sem retransmitir',async()=>{
 test('cancelamento antes da transmissão limpa reserva e não chama HTTP',async()=>{
  let calls=0;const j=journal();await tick(async(op)=>op==='claim'?job:{allowed:false,terminal:true},enabled,j,async()=>{calls++;});assert.equal(calls,0);assert.equal(await j.load(),null);
 });
-test('sincronização exige instância vinculada, todas as páginas e filtra fromMe',async()=>{
+test('sincronização lê conjunto completo em uma consulta, inclui SAIR atrasado e filtra fromMe',async()=>{
  const events=[];const rpc=async(op,args)=>{events.push([op,args]);if(op==='status')return{phone:'5551999990000',cursor:new Date(Date.now()-60000).toISOString()};return{};};
  const record={id:'db-in-1',key:{id:'in-1',fromMe:false,remoteJid:'5551999991111@s.whatsapp.net'},message:{conversation:'SAIR'},messageTimestamp:Math.floor(Date.now()/1000)-86400};
  const own=Array.from({length:50},(_,i)=>({...record,id:'db-own-'+i,key:{...record.key,id:'own-'+i,fromMe:true}}));
- const http=async(url,opt)=>{if(!url.includes('fetchInstances'))assert.deepEqual(JSON.parse(opt.body).where,{});return{ok:true,json:async()=>url.includes('fetchInstances')?[{name:'fixture',connectionStatus:'open',ownerJid:'5551999990000@s.whatsapp.net'}]:{messages:{pages:2,total:51,records:JSON.parse(opt.body).page===1?[record,...own.slice(0,49)]:own.slice(49)}}};};
+ const http=async(url,opt)=>{if(!url.includes('fetchInstances'))assert.deepEqual(JSON.parse(opt.body),{where:{},page:1,offset:10000});return{ok:true,json:async()=>url.includes('fetchInstances')?[{name:'fixture',connectionStatus:'open',ownerJid:'5551999990000@s.whatsapp.net'}]:{messages:{pages:1,total:51,records:[record,...own]}}};};
  await synchronize(rpc,cfg,http);assert.equal(events.filter(x=>x[0]==='inbound').length,1);assert.equal(events.at(-1)[0],'synced');
  await assert.rejects(()=>synchronize(rpc,cfg,async()=>({ok:true,json:async()=>[]})));
 });
-test('página incompleta impede avançar cursor',async()=>{
+test('resposta incompleta impede avançar cursor',async()=>{
  const calls=[];const rpc=async(op)=>{calls.push(op);return{phone:'5551999990000',cursor:new Date().toISOString()};};
- let page=0;const http=async(url)=>({ok:true,json:async()=>url.includes('fetchInstances')?[{name:'fixture',connectionStatus:'open',ownerJid:'5551999990000@s.whatsapp.net'}]:{messages:{pages:++page===1?2:3,total:page===1?51:101,records:[]}}});
+ const http=async(url)=>({ok:true,json:async()=>url.includes('fetchInstances')?[{name:'fixture',connectionStatus:'open',ownerJid:'5551999990000@s.whatsapp.net'}]:{messages:{pages:1,total:51,records:[]}}});
  await assert.rejects(()=>synchronize(rpc,cfg,http));assert.ok(!calls.includes('synced'));
 });
