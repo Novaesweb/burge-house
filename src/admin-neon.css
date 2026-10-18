@@ -194,3 +194,49 @@
 @media(max-width:999px){
   .connect-page::before{background-position:32% center!important;background-image:linear-gradient(180deg,#10030633,#1003067a 42%,#100306a8),url('./assets/brand/burger-house-background.png')!important}
 }
+
+/* Status-based color system, matching the approved reference. All cards in the
+   same stage share a color; changing stage automatically changes the card. */
+.orders-workbench{
+  --bh-status-red:#ff202e;
+  --bh-status-yellow:#ffc107;
+  --bh-status-purple:#8b24ff;
+  --bh-status-blue:#087cff;
+  --bh-status-green:#00d46a;
+  --bh-status-gray:#7b7e88;
+}
+.orders-workbench .tone-red{--order-card-color:var(--bh-status-red);--tone:#ff6470;--tone-bg:#ff202e24;--tone-border:#ff202e9c;--tone-solid:#e4192a;--order-accent:var(--bh-status-red)}
+.orders-workbench .tone-yellow{--order-card-color:var(--bh-status-yellow);--tone:#ffd954;--tone-bg:#ffc10724;--tone-border:#ffc1079c;--tone-solid:#d59a00;--order-accent:var(--bh-status-yellow)}
+.orders-workbench .tone-purple{--order-card-color:var(--bh-status-purple);--tone:#bd80ff;--tone-bg:#8b24ff24;--tone-border:#8b24ff9c;--tone-solid:#7c16df;--order-accent:var(--bh-status-purple)}
+.orders-workbench .tone-blue{--order-card-color:var(--bh-status-blue);--tone:#65afff;--tone-bg:#087cff24;--tone-border:#087cff9c;--tone-solid:#087cff;--order-accent:var(--bh-status-blue)}
+.orders-workbench .tone-green{--order-card-color:var(--bh-status-green);--tone:#5bf7a8;--tone-bg:#00d46a24;--tone-border:#00d46a9c;--tone-solid:#009d50;--order-accent:var(--bh-status-green)}
+.orders-workbench .tone-gray{--order-card-color:var(--bh-status-gray);--tone:#b4b6c0;--tone-bg:#7b7e8824;--tone-border:#7b7e889c;--tone-solid:#62646f;--order-accent:var(--bh-status-gray)}
+.orders-workbench .delivery-order-card{
+  --order-card-color:var(--bh-status-gray);
+  border:2px solid var(--order-card-color)!important;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--order-card-color) 25%,#1a1014),#140c10 78%)!important;
+  box-shadow:0 10px 26px #0009,0 0 18px color-mix(in srgb,var(--order-card-color) 30%,transparent)!important;
+}
+.orders-workbench .delivery-order-card:hover{
+  border-color:var(--order-card-color)!important;
+  box-shadow:0 12px 32px #000a,0 0 26px color-mix(in srgb,var(--order-card-color) 50%,transparent)!important;
+}
+.orders-workbench .delivery-order-card .order-card-accent{
+  background:var(--order-card-color)!important;
+  box-shadow:0 0 19px var(--order-card-color)!important;
+}
+.orders-workbench .delivery-order-card .order-status{
+  color:var(--tone)!important;background:var(--tone-bg)!important;border-color:var(--tone-border)!important;
+}
+.orders-workbench .delivery-order-card .order-primary{
+  background:var(--tone-solid)!important;
+  border-color:var(--tone-border)!important;
+  color:#fff!important;
+}
+.orders-workbench .delivery-order-card.tone-yellow .order-primary{color:#211600!important}
+.orders-workbench .status-filter.tone-yellow.is-selected{background:#ffc10726;border-color:#ffc107;color:#ffd954}
+.orders-workbench .status-filter.tone-purple.is-selected{background:#8b24ff26;border-color:#8b24ff;color:#bd80ff}
+.orders-workbench .delivery-order-card .order-number{color:var(--order-card-color)!important}
+.orders-workbench .delivery-order-card .order-quantity{background:color-mix(in srgb,var(--order-card-color) 30%,#211419)}
+/* Keep 'itens separados' distinct from the six requested main statuses,
+   while using purple as the handoff stage family. */
