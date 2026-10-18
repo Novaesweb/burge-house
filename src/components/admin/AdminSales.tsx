@@ -37,6 +37,7 @@ export const AdminSales: React.FC = () => {
   const [manualMethod, setManualMethod] = useState<PaymentMethod>('pix');
   const [manualDescription, setManualDescription] = useState('');
   const [manualCategory, setManualCategory] = useState('Venda Balcão');
+  const [manualType, setManualType] = useState<'income' | 'expense'>('income');
 
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -71,11 +72,15 @@ export const AdminSales: React.FC = () => {
     .reduce((sum, o) => sum + o.total, 0);
 
   // Manual Payments Revenue
-  const manualRevenue = periodManualPayments.reduce((sum, p) => sum + p.amount, 0);
+  const manualIncome = periodManualPayments.filter(p => p.type !== 'expense');
+  const manualExpenses = periodManualPayments.filter(p => p.type === 'expense');
+  const manualRevenue = manualIncome.reduce((sum, p) => sum + p.amount, 0);
+  const totalExpenses = manualExpenses.reduce((sum, p) => sum + p.amount, 0);
+  const estimatedBalance = ordersRevenue + manualRevenue - totalExpenses;
 
   // Consolidated Total Revenue
   const totalRevenue = ordersRevenue + manualRevenue;
-  const totalTransactionsCount = periodOrders.length + periodManualPayments.length;
+  const totalTransactionsCount = periodOrders.length + manualIncome.length;
   const ticketMedio = totalTransactionsCount > 0 ? totalRevenue / totalTransactionsCount : 0;
 
   // Day / Week / Month consolidated metrics
@@ -84,7 +89,7 @@ export const AdminSales: React.FC = () => {
       .filter((o) => new Date(o.createdAt).getTime() >= startTime)
       .reduce((sum, o) => sum + o.total, 0);
     const manRev = manualPayments
-      .filter((p) => new Date(p.createdAt).getTime() >= startTime)
+      .filter((p) => p.type !== 'expense' && new Date(p.createdAt).getTime() >= startTime)
       .reduce((sum, p) => sum + p.amount, 0);
     return ordRev + manRev;
   };
@@ -96,15 +101,15 @@ export const AdminSales: React.FC = () => {
   // Consolidated Payment Methods Breakdown (Orders + Manual)
   const pixRevenue =
     periodOrders.filter((o) => o.paymentMethod === 'pix').reduce((sum, o) => sum + o.total, 0) +
-    periodManualPayments.filter((p) => p.paymentMethod === 'pix').reduce((sum, p) => sum + p.amount, 0);
+    manualIncome.filter((p) => p.paymentMethod === 'pix').reduce((sum, p) => sum + p.amount, 0);
 
   const cardRevenue =
     periodOrders.filter((o) => o.paymentMethod === 'credit_card').reduce((sum, o) => sum + o.total, 0) +
-    periodManualPayments.filter((p) => p.paymentMethod === 'credit_card').reduce((sum, p) => sum + p.amount, 0);
+    manualIncome.filter((p) => p.paymentMethod === 'credit_card').reduce((sum, p) => sum + p.amount, 0);
 
   const cashRevenue =
     periodOrders.filter((o) => o.paymentMethod === 'cash').reduce((sum, o) => sum + o.total, 0) +
-    periodManualPayments.filter((p) => p.paymentMethod === 'cash').reduce((sum, p) => sum + p.amount, 0);
+    manualIncome.filter((p) => p.paymentMethod === 'cash').reduce((sum, p) => sum + p.amount, 0);
 
   const pixPercent = totalRevenue > 0 ? Math.round((pixRevenue / totalRevenue) * 100) : 0;
   const cardPercent = totalRevenue > 0 ? Math.round((cardRevenue / totalRevenue) * 100) : 0;
@@ -118,14 +123,16 @@ export const AdminSales: React.FC = () => {
     await addManualPaymentAction({
       siteId: siteSettings.siteId,
       amount: val,
+      type: manualType,
       paymentMethod: manualMethod,
-      description: manualDescription.trim() || 'Lançamento Manual no Caixa',
+      description: manualDescription.trim() || (manualType === 'expense' ? 'Despesa registrada' : 'Recebimento manual'),
       category: manualCategory,
-      createdBy: 'Lucas Rodrigo (Dono)',
+      createdBy: 'Administrador da loja',
     });
 
     setManualAmount('');
     setManualDescription('');
+    setManualType('income');
     setIsManualModalOpen(false);
   };
 
@@ -166,7 +173,7 @@ export const AdminSales: React.FC = () => {
         <td style="border: 1px solid #ddd; padding: 8px;">${new Date(p.createdAt).toLocaleDateString('pt-BR')} ${new Date(p.createdAt).toLocaleTimeString('pt-BR')}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${p.description} (${p.category || 'Balcão'})</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${p.paymentMethod.toUpperCase()}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">RECEBIDO</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${p.type === 'expense' ? 'DESPESA' : 'RECEITA'}</td>
         <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">R$ ${p.amount.toFixed(2).replace('.', ',')}</td>
       </tr>
     `
@@ -197,6 +204,8 @@ export const AdminSales: React.FC = () => {
           <p><strong>Faturamento Total:</strong> R$ ${totalRevenue.toFixed(2).replace('.', ',')}</p>
           <p><strong>- De Pedidos do Sistema:</strong> R$ ${ordersRevenue.toFixed(2).replace('.', ',')}</p>
           <p><strong>- De Lançamentos Manuais:</strong> R$ ${manualRevenue.toFixed(2).replace('.', ',')}</p>
+          <p><strong>Despesas lançadas:</strong> R$ ${totalExpenses.toFixed(2).replace('.', ',')}</p>
+          <p><strong>Saldo estimado (não é lucro líquido):</strong> R$ ${estimatedBalance.toFixed(2).replace('.', ',')}</p>
           <p><strong>Total de Transações:</strong> ${totalTransactionsCount} | <strong>Ticket Médio:</strong> R$ ${ticketMedio.toFixed(2).replace('.', ',')}</p>
           <p><strong>Recebimentos:</strong> Pix: R$ ${pixRevenue.toFixed(2)} (${pixPercent}%) | Cartão: R$ ${cardRevenue.toFixed(2)} (${cardPercent}%) | Dinheiro: R$ ${cashRevenue.toFixed(2)} (${cashPercent}%)</p>
         </div>
@@ -219,7 +228,7 @@ export const AdminSales: React.FC = () => {
           </tbody>
         </table>
         <br>
-        <p style="text-align: center; color: #777; font-size: 9pt;">Relatório gerado automaticamente pelo armazenamento local - Burger House Delivery</p>
+        <p style="text-align: center; color: #777; font-size: 9pt;">Relatório gerado pelo painel da loja - Burger House Delivery</p>
       </body>
       </html>
     `;
@@ -309,6 +318,12 @@ export const AdminSales: React.FC = () => {
 
       {/* Main KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Resumo financeiro: despesas não compõem o faturamento. */}
+        <div className="col-span-full grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4"><p className="text-xs text-neutral-400">Receitas do período</p><p className="text-xl font-black text-emerald-400">R$ {totalRevenue.toFixed(2).replace('.', ',')}</p></div>
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4"><p className="text-xs text-neutral-400">Despesas registradas</p><p className="text-xl font-black text-rose-400">R$ {totalExpenses.toFixed(2).replace('.', ',')}</p></div>
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4"><p className="text-xs text-neutral-400">Saldo estimado do período</p><p className="text-xl font-black text-white">R$ {estimatedBalance.toFixed(2).replace('.', ',')}</p><p className="text-[11px] text-neutral-500 mt-1">Receitas menos despesas lançadas. Não é lucro líquido nem saldo bancário.</p></div>
+        </div>
         {/* Vendas do Dia */}
         <div className="bg-neutral-900 rounded-3xl p-5 border border-neutral-800">
           <div className="flex items-center justify-between text-emerald-400 mb-2">
@@ -647,6 +662,14 @@ export const AdminSales: React.FC = () => {
                 </div>
               </div>
 
+              <div className="rounded-xl border border-neutral-700 p-3 space-y-2">
+                <label className="text-neutral-300 font-semibold block">Tipo de lançamento</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => { setManualType('income'); setManualCategory('Venda Balcão'); }} className={`rounded-lg p-2 text-sm font-bold ${manualType === 'income' ? 'bg-emerald-700 text-white' : 'bg-neutral-800 text-neutral-300'}`}>Receita</button>
+                  <button type="button" onClick={() => { setManualType('expense'); setManualCategory('Ingredientes'); }} className={`rounded-lg p-2 text-sm font-bold ${manualType === 'expense' ? 'bg-rose-700 text-white' : 'bg-neutral-800 text-neutral-300'}`}>Despesa</button>
+                </div>
+                <p className="text-xs text-neutral-400">Não registre aqui uma venda que já virou pedido no sistema: isso duplicaria a receita.</p>
+              </div>
               <div>
                 <label className="text-neutral-300 font-semibold block mb-1">
                   Categoria / Origem
@@ -656,11 +679,22 @@ export const AdminSales: React.FC = () => {
                   onChange={(e) => setManualCategory(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:outline-none"
                 >
-                  <option value="Venda Balcão">Venda Balcão (Presencial)</option>
-                  <option value="Pedido WhatsApp">Pedido por WhatsApp</option>
-                  <option value="Pagamento Antecipado">Pagamento Antecipado</option>
-                  <option value="Ajuste de Caixa">Ajuste de Caixa</option>
-                  <option value="Outro">Outro Recebimento</option>
+                  {manualType === 'income' ? <>
+                    <option value="Venda Balcão">Venda Balcão (Presencial)</option>
+                    <option value="Pedido WhatsApp">Pedido por WhatsApp</option>
+                    <option value="Pagamento Antecipado">Pagamento Antecipado</option>
+                    <option value="Ajuste de Caixa">Ajuste de Caixa</option>
+                    <option value="Outro">Outro Recebimento</option>
+                  </> : <>
+                    <option value="Ingredientes">Ingredientes</option>
+                    <option value="Embalagens">Embalagens</option>
+                    <option value="Entregas">Entregas</option>
+                    <option value="Funcionários">Funcionários</option>
+                    <option value="Aluguel">Aluguel</option>
+                    <option value="Energia e água">Energia e água</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Outras despesas">Outras despesas</option>
+                  </>}
                 </select>
               </div>
 
@@ -689,7 +723,7 @@ export const AdminSales: React.FC = () => {
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold shadow-md shadow-red-950/50 hover:from-red-500 hover:to-rose-500"
                 >
-                  Salvar no Faturamento
+                  {manualType === 'expense' ? 'Registrar despesa' : 'Salvar recebimento'}
                 </button>
               </div>
             </form>
