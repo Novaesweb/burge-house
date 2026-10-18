@@ -52,6 +52,8 @@ export interface SiteSettings {
   isOpen: boolean;
   logoUrl: string;
   bannerUrl: string;
+  customerNotice?: string;
+  customerNoticeEnabled?: boolean;
   primaryColor: string;
   acceptedPaymentMethods: PaymentMethod[];
   ownerPin?: string;
@@ -116,6 +118,7 @@ export interface Product {
   hasMeatPoint?: boolean;
   removableIngredients?: string[];
   addons?: ProductAddon[];
+  comboProductIds?: string[];
 }
 
 export interface CartItem {
