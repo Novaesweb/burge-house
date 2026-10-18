@@ -121,6 +121,8 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
   if(error){const messages:Record<string,string>={
     STORE_UNAVAILABLE:'A loja está indisponível.',
     STORE_CLOSED:'A loja está fechada no momento.',
+    INVALID_COUPON:'O código do cupom é inválido.',
+    COUPON_UNAVAILABLE:'O cupom expirou, atingiu o limite ou não atende ao pedido mínimo.',
     PRODUCT_UNAVAILABLE:'Um item do carrinho não está mais disponível. Remova-o e adicione-o novamente.',
     INVALID_ADDON:'Um adicional do carrinho não está cadastrado neste produto. Remova o item e adicione-o novamente.',
     INVALID_ADDONS:'Os adicionais do item não são válidos. Remova o item e adicione-o novamente.',
