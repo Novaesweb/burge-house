@@ -7,6 +7,8 @@ import { formatBRL } from '../utils/formatters';
 export const CartView: React.FC = () => {
   const {
     cart,
+    products,
+    addToCart,
     updateCartQuantity,
     clearCart,
     cartSubtotal,
@@ -14,6 +16,11 @@ export const CartView: React.FC = () => {
     siteSettings,
     setCustomerView,
   } = useStore();
+
+  const suggestedProducts = siteSettings.upsellEnabled
+    ? products.filter(p => p.isActive && !cart.some(item => item.product.id === p.id)
+      && (!siteSettings.upsellProductIds?.length || siteSettings.upsellProductIds.includes(p.id))).slice(0, 3)
+    : [];
 
   const deliveryFee = typeof siteSettings?.deliveryFee === 'number' ? siteSettings.deliveryFee : 5.0;
 
@@ -210,6 +217,13 @@ export const CartView: React.FC = () => {
             </div>
           </div>
 
+          {suggestedProducts.length > 0 && <section className="rounded-2xl border border-amber-700/40 bg-neutral-900 p-4 space-y-3">
+            <h3 className="text-lg font-black text-white">Complete seu pedido</h3>
+            {suggestedProducts.map(p => <div key={p.id} className="flex items-center gap-3 rounded-xl bg-neutral-950 p-3">
+              <div className="flex-1 min-w-0"><p className="text-white font-bold truncate">{p.name}</p><p className="text-amber-400">{formatBRL(p.price)}</p></div>
+              <button type="button" onClick={() => addToCart(p, 1)} className="rounded-lg bg-red-600 px-3 py-2 text-white font-bold">+ Adicionar</button>
+            </div>)}
+          </section>}
           {/* Finalize Button */}
           <button
             onClick={() => setCustomerView('checkout')}
