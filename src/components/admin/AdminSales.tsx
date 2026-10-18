@@ -173,7 +173,7 @@ export const AdminSales: React.FC = () => {
         <td style="border: 1px solid #ddd; padding: 8px;">${new Date(p.createdAt).toLocaleDateString('pt-BR')} ${new Date(p.createdAt).toLocaleTimeString('pt-BR')}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${p.description} (${p.category || 'Balcão'})</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${p.paymentMethod.toUpperCase()}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">RECEBIDO</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${p.type === 'expense' ? 'DESPESA' : 'RECEITA'}</td>
         <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">R$ ${p.amount.toFixed(2).replace('.', ',')}</td>
       </tr>
     `
@@ -204,6 +204,8 @@ export const AdminSales: React.FC = () => {
           <p><strong>Faturamento Total:</strong> R$ ${totalRevenue.toFixed(2).replace('.', ',')}</p>
           <p><strong>- De Pedidos do Sistema:</strong> R$ ${ordersRevenue.toFixed(2).replace('.', ',')}</p>
           <p><strong>- De Lançamentos Manuais:</strong> R$ ${manualRevenue.toFixed(2).replace('.', ',')}</p>
+          <p><strong>Despesas lançadas:</strong> R$ ${totalExpenses.toFixed(2).replace('.', ',')}</p>
+          <p><strong>Saldo estimado (não é lucro líquido):</strong> R$ ${estimatedBalance.toFixed(2).replace('.', ',')}</p>
           <p><strong>Total de Transações:</strong> ${totalTransactionsCount} | <strong>Ticket Médio:</strong> R$ ${ticketMedio.toFixed(2).replace('.', ',')}</p>
           <p><strong>Recebimentos:</strong> Pix: R$ ${pixRevenue.toFixed(2)} (${pixPercent}%) | Cartão: R$ ${cardRevenue.toFixed(2)} (${cardPercent}%) | Dinheiro: R$ ${cashRevenue.toFixed(2)} (${cashPercent}%)</p>
         </div>
@@ -226,7 +228,7 @@ export const AdminSales: React.FC = () => {
           </tbody>
         </table>
         <br>
-        <p style="text-align: center; color: #777; font-size: 9pt;">Relatório gerado automaticamente pelo armazenamento local - Burger House Delivery</p>
+        <p style="text-align: center; color: #777; font-size: 9pt;">Relatório gerado pelo painel da loja - Burger House Delivery</p>
       </body>
       </html>
     `;
