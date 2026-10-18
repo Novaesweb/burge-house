@@ -1,6 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { isWithinOpeningHours } from '../utils/openingHours';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   User,
@@ -41,6 +41,7 @@ export const CheckoutView: React.FC = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponFeedback, setCouponFeedback] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const couponRequestId = useRef(0);
   const [cep, setCep] = useState('');
   const [cepMessage, setCepMessage] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
@@ -98,6 +99,7 @@ export const CheckoutView: React.FC = () => {
   };
 
   const checkCoupon = async () => {
+    const requestId = ++couponRequestId.current;
     setCouponLoading(true); setCouponFeedback('');
     try {
       const code = couponInput.trim().toUpperCase();
@@ -105,11 +107,12 @@ export const CheckoutView: React.FC = () => {
       const {data,error} = await requireSupabase().rpc('delivery_quote_coupon', {
         p_store_id: siteId, p_code: code, p_subtotal: cartSubtotal
       });
+      if (requestId !== couponRequestId.current) return;
       if (error || !data?.valid) { setCouponCode(''); setCouponDiscount(0); setCouponFeedback('Cupom inválido, expirado ou indisponível para este pedido.'); return; }
       setCouponCode(code); setCouponDiscount(Number(data.discount)||0);
       setCouponFeedback('Cupom aplicado! O valor final será confirmado pelo servidor.');
-    } catch { setCouponCode(''); setCouponDiscount(0); setCouponFeedback('Não foi possível verificar o cupom.'); }
-    finally { setCouponLoading(false); }
+    } catch { if (requestId === couponRequestId.current) { setCouponCode(''); setCouponDiscount(0); setCouponFeedback('Não foi possível verificar o cupom.'); } }
+    finally { if (requestId === couponRequestId.current) setCouponLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,7 +163,7 @@ export const CheckoutView: React.FC = () => {
     }
   };
 
-  useEffect(() => { setCouponCode(''); setCouponDiscount(0); setCouponFeedback(''); }, [cartSubtotal]);
+  useEffect(() => { ++couponRequestId.current; setCouponCode(''); setCouponDiscount(0); setCouponFeedback(''); setCouponLoading(false); }, [cartSubtotal]);
   const deliveryFee = typeof siteSettings?.deliveryFee === 'number' ? siteSettings.deliveryFee : 5.0;
 
   return (
@@ -469,7 +472,7 @@ export const CheckoutView: React.FC = () => {
             <div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 mb-4 space-y-2">
                 <label className="text-sm font-bold text-white block">Cupom de desconto</label>
                 <div className="flex gap-2">
-                  <input value={couponInput} onChange={e=>{setCouponInput(e.target.value.toUpperCase());setCouponCode('');setCouponDiscount(0);}}
+                  <input value={couponInput} onChange={e=>{++couponRequestId.current;setCouponInput(e.target.value.toUpperCase());setCouponCode('');setCouponDiscount(0);setCouponFeedback('');setCouponLoading(false);}}
                     placeholder="Digite seu cupom" className="min-w-0 flex-1 bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-white"/>
                   <button type="button" onClick={()=>void checkCoupon()} disabled={couponLoading}
                     className="bg-red-600 rounded-lg px-3 font-bold text-white">{couponLoading?'...':'Aplicar'}</button>
