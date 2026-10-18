@@ -1,6 +1,6 @@
 import { useConnect } from '../../context/ConnectContext';
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, UtensilsCrossed, PanelLeftClose, PanelLeftOpen, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, UtensilsCrossed, PanelLeftClose, PanelLeftOpen, Megaphone, UserCog } from 'lucide-react';
 import { useStore, type AdminView } from '../../context/StoreContext';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
 import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
@@ -12,6 +12,7 @@ const navigation = [
   { id: 'categories', label: 'Categorias', icon: FolderTree },
   { id: 'customers', label: 'Clientes', icon: Users },
   { id: 'marketing', label: 'Marketing', icon: Megaphone },
+  { id: 'team', label: 'Equipe e acessos', icon: UserCog },
   { id: 'sales', label: 'Vendas', icon: Wallet },
   { id: 'reports', label: 'Relatórios', icon: ChartNoAxesCombined },
   { id: 'reviews', label: 'Avaliações', icon: Star },
