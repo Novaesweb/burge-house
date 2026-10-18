@@ -4,9 +4,9 @@ export function ordersForStore(orders:Order[],siteId:string) {return orders.filt
 
 export const ORDER_STAGES = [
   {id:'recebido',label:'Novos recebidos',short:'Novos',tone:'red',action:'Iniciar preparo',next:'preparando'},
-  {id:'preparando',label:'Preparando',short:'Preparando',tone:'orange',action:'Marcar como separado',next:'itens_separados'},
+  {id:'preparando',label:'Preparando',short:'Preparando',tone:'yellow',action:'Marcar como separado',next:'itens_separados'},
   {id:'itens_separados',label:'Separados',short:'Separados',tone:'purple',action:'Aguardar motoboy',next:'esperando_motoboy'},
-  {id:'esperando_motoboy',label:'Esperando motoboy',short:'Esperando motoboy',tone:'cyan',action:'Saiu para entrega',next:'saiu_para_entrega'},
+  {id:'esperando_motoboy',label:'Esperando motoboy',short:'Esperando motoboy',tone:'purple',action:'Saiu para entrega',next:'saiu_para_entrega'},
   {id:'saiu_para_entrega',label:'Em rota',short:'Em rota',tone:'blue',action:'Marcar como entregue',next:'entregue'},
   {id:'entregue',label:'Entregues',short:'Entregue',tone:'green'},
   {id:'cancelado',label:'Cancelados',short:'Cancelado',tone:'gray'},
