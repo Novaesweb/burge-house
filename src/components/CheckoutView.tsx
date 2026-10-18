@@ -136,16 +136,6 @@ export const CheckoutView: React.FC = () => {
       setIsSubmitting(true);
       setErrorMsg('');
 
-      // Save profile only after a confirmed order.
-      /* local legacy profile is not shared between shops.
-      localStorage.setItem('customer_saved_cep', cep);
-      localStorage.setItem('customer_saved_name', name.trim());
-      localStorage.setItem('customer_saved_phone', phone.trim());
-      localStorage.setItem('customer_saved_street', street.trim());
-      localStorage.setItem('customer_saved_number', number.trim());
-      localStorage.setItem('customer_saved_complement', complement.trim());
-      localStorage.setItem('customer_saved_neighborhood', neighborhood.trim()); */
-
       await handleCheckoutOrder({
         customerName: name,
         customerPhone: phone,
