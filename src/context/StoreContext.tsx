@@ -69,6 +69,7 @@ export type AdminView =
   | 'products'
   | 'categories'
   | 'customers'
+  | 'marketing'
   | 'sales'
   | 'reports'
   | 'reviews'
