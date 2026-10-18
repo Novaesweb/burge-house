@@ -1,0 +1,142 @@
+/* Burge House | Dark Premium Neon — owner panel and login only */
+:root{
+  --bh-night:#0b0909;--bh-panel:#1c1719;--bh-panel-raised:#251d20;
+  --bh-red:#ff202e;--bh-orange:#ff9500;--bh-purple:#8b24ff;
+  --bh-blue:#087cff;--bh-green:#00d46a;--bh-yellow:#ffc107;
+  --bh-muted:#b5aeb3;--bh-border:#493036;
+}
+.admin-shell{background:radial-gradient(ellipse at 85% 0%,#ff202e12,transparent 36%),var(--bh-night);color:#fff}
+.admin-sidebar,.admin-topbar{background:#151113;border-color:var(--bh-border)}
+.admin-brand,.admin-breadcrumb strong,.admin-profile strong{color:#fff}
+.admin-brand .brand-symbol{background:linear-gradient(135deg,var(--bh-red),#a70c19);box-shadow:0 0 22px #ff202e55}
+.admin-nav-item{color:#c6bec1}
+.admin-nav-item:hover{background:#302025;color:#fff}
+.admin-nav-item.active{background:#ff202e1c;color:#ff6570;box-shadow:inset 3px 0 0 var(--bh-red)}
+.admin-nav-item b{background:var(--bh-red)}
+.admin-topbar{box-shadow:0 1px 20px #0005}
+.admin-content{color:#fff}
+.admin-content h1{color:#fff}
+.admin-content :is(input,select,textarea):focus-visible,.connect-page :is(input,button,a):focus-visible{outline:2px solid var(--bh-red);outline-offset:2px}
+
+/* Order workspace: scoped to the admin orders page */
+.orders-workbench{color:#fff}
+.orders-workbench :is(.orders-page-heading,.orders-control-panel,.orders-overview>div,.order-attention,.orders-empty){
+  border:1px solid var(--bh-border);background:var(--bh-panel);border-radius:16px;
+}
+.orders-workbench .orders-page-heading{background:linear-gradient(110deg,#29171d,var(--bh-panel) 65%);padding:20px}
+.orders-workbench .orders-overview>div{background:var(--bh-panel-raised)}
+.orders-workbench .overview-primary{border-color:#ff202e77!important;box-shadow:0 0 18px #ff202e1a}
+.orders-workbench .orders-control-panel{padding:14px}
+.orders-workbench .delivery-order-card{
+  background:var(--bh-panel);color:#fff;border:1px solid #493036;
+  border-radius:16px;overflow:hidden;box-shadow:0 10px 28px #0006;
+  transition:border-color .2s,box-shadow .2s,transform .2s;
+}
+.orders-workbench .delivery-order-card:hover{border-color:#ff202e99;box-shadow:0 12px 32px #0009,0 0 14px #ff202e1a}
+.orders-workbench .delivery-order-card.is-new{border-color:#ff202eaa;box-shadow:0 0 18px #ff202e24}
+.orders-workbench .order-number,.orders-workbench .order-customer h2,.orders-workbench .order-total strong{color:#fff}
+.orders-workbench .order-card-accent.tone-red{background:var(--bh-red)}
+.orders-workbench .order-card-accent.tone-orange{background:var(--bh-orange)}
+.orders-workbench .order-card-accent.tone-purple{background:var(--bh-purple)}
+.orders-workbench .order-card-accent.tone-blue{background:var(--bh-blue)}
+.orders-workbench .order-card-accent.tone-green{background:var(--bh-green)}
+.orders-workbench .order-card-accent.tone-gray{background:#666875}
+.orders-workbench .tone-red{--order-accent:var(--bh-red)}
+.orders-workbench .tone-orange{--order-accent:var(--bh-orange)}
+.orders-workbench .tone-purple{--order-accent:var(--bh-purple)}
+.orders-workbench .tone-blue{--order-accent:var(--bh-blue)}
+.orders-workbench .tone-green{--order-accent:var(--bh-green)}
+.orders-workbench .tone-gray{--order-accent:#81838e}
+.orders-workbench .status-filter.is-selected{border-color:var(--order-accent,var(--bh-red));box-shadow:0 0 12px color-mix(in srgb,var(--order-accent,var(--bh-red)) 24%,transparent)}
+.orders-workbench .order-status{border-color:var(--order-accent,var(--bh-red));color:var(--order-accent,var(--bh-red))}
+.orders-workbench .order-primary{background:var(--order-accent,var(--bh-red));border-color:var(--order-accent,var(--bh-red));color:#fff;font-weight:800}
+.orders-workbench .order-primary:hover{filter:brightness(1.14);box-shadow:0 0 17px color-mix(in srgb,var(--order-accent,var(--bh-red)) 40%,transparent)}
+.orders-workbench .order-search input{background:#120f11;color:#fff;border-color:var(--bh-border)}
+.orders-workbench .order-tool,.orders-workbench .order-secondary-actions button{border-color:var(--bh-border)}
+.orders-workbench .order-detail-dialog{background:#181315;border-color:var(--bh-border)}
+
+/* Owner login: preserve existing Supabase form and actions */
+.connect-page{background:radial-gradient(ellipse at 20% 5%,#ff202e2b,transparent 45%),radial-gradient(ellipse at 100% 100%,#8b24ff19,transparent 48%),var(--bh-night);color:#fff}
+.connect-card{background:linear-gradient(145deg,#261b1f,#161113 70%);border:1px solid #7d303d;border-radius:24px;box-shadow:0 24px 80px #000a,0 0 32px #ff202e20}
+.connect-icon{background:#ff202e1b;border:1px solid #ff202e77;color:#ff5963;box-shadow:0 0 22px #ff202e26}
+.connect-eyebrow{color:#ff6b75!important}
+.connect-card h1{color:#fff;font-weight:850}
+.connect-card p,.connect-card small{color:#c6bbc0}
+.connect-card label{color:#f0e7e9}
+.connect-card input{background:#100d0f;color:#fff;border:1px solid #68434b;border-radius:12px}
+.connect-card input:focus{border-color:var(--bh-red);box-shadow:0 0 0 3px #ff202e24;outline:none}
+.connect-card form button,.connect-card .connect-status button{background:linear-gradient(120deg,var(--bh-red),#c61123);color:#fff;border:0;border-radius:12px;font-weight:800;box-shadow:0 8px 22px #ff202e32}
+.connect-card form button:hover,.connect-card .connect-status button:hover{filter:brightness(1.1)}
+.connect-card .connect-secondary{background:#2a2024;color:#fff;border:1px solid #61404a;border-radius:12px}
+.connect-back:hover{color:#fff}
+.connect-status{background:#251c19;border-color:#7b5632}
+.connect-error{background:#36161c;border-color:#ff202e77;color:#ff9aa1}
+@media(max-width:767px){
+  .orders-workbench .orders-page-heading{padding:15px}
+  .orders-workbench .orders-control-panel{padding:10px}
+  .connect-card{padding:24px 20px;border-radius:20px}
+}
+@media(prefers-reduced-motion:reduce){.orders-workbench .delivery-order-card{transition:none}}
+
+/* Vibrant burger-themed backgrounds and accents */
+.admin-shell{background:radial-gradient(ellipse at 95% 0%,#ff95003b,transparent 33%),radial-gradient(ellipse at 0% 80%,#ff202e26,transparent 35%),linear-gradient(130deg,#130508,#240c0b 52%,#0b0909)}
+.admin-sidebar{background:linear-gradient(175deg,#21080e 0%,#140a0b 58%,#39100b 100%);border-right:1px solid #fa492d77}
+.admin-topbar{background:linear-gradient(95deg,#21090d,#421409 58%,#1b0a0b);border-bottom:1px solid #ff950065}
+.admin-content{background:radial-gradient(circle at 100% 0%,#ff950015,transparent 42%)}
+.orders-workbench .orders-page-heading{background:linear-gradient(115deg,#48100d,#230d11 56%,#59250c);border-color:#ff950065}
+.orders-workbench .orders-overview>div{background:linear-gradient(140deg,#291115,#180d10);border-color:#ff950055}
+.orders-workbench .orders-overview>div:nth-child(2){border-color:#ff950099}
+.orders-workbench .orders-overview>div:nth-child(3){border-color:#8b24ff99}
+.orders-workbench .orders-overview>div:nth-child(4){border-color:#087cff99}
+.orders-workbench .delivery-order-card{background:linear-gradient(155deg,#291318,#150d10 72%);border-color:var(--order-accent,#ff202e);box-shadow:0 12px 30px #0009,0 0 14px color-mix(in srgb,var(--order-accent,#ff202e) 17%,transparent)}
+.orders-workbench .delivery-order-card:has(.tone-red){--order-accent:#ff202e}
+.orders-workbench .delivery-order-card:has(.tone-orange){--order-accent:#ff9500}
+.orders-workbench .delivery-order-card:has(.tone-purple){--order-accent:#8b24ff}
+.orders-workbench .delivery-order-card:has(.tone-blue){--order-accent:#087cff}
+.orders-workbench .delivery-order-card:has(.tone-green){--order-accent:#00d46a}
+.orders-workbench .delivery-order-card:has(.tone-gray){--order-accent:#666875}
+.orders-workbench .delivery-order-card:hover{border-color:var(--order-accent);box-shadow:0 12px 35px #0009,0 0 24px color-mix(in srgb,var(--order-accent) 35%,transparent)}
+.orders-workbench .orders-control-panel{background:linear-gradient(110deg,#211014,#1c1015);border-color:#ff202e66}
+.orders-workbench .status-filter{transition:box-shadow .2s,transform .2s}
+.orders-workbench .status-filter:hover{transform:translateY(-1px)}
+.connect-page{background:radial-gradient(ellipse at 0% 15%,#ff202e75,transparent 37%),radial-gradient(ellipse at 100% 5%,#ff950055,transparent 38%),radial-gradient(ellipse at 90% 100%,#8b24ff45,transparent 43%),linear-gradient(145deg,#100508,#350b0b 58%,#170a08)}
+.connect-card{background:linear-gradient(155deg,#391315,#170b0d 60%,#32140c);border-color:#ff950088;box-shadow:0 24px 90px #000c,0 0 32px #ff202e50}
+.connect-icon{background:linear-gradient(135deg,#ff202e,#ff9500);color:#fff;border-color:#ffbe4e;box-shadow:0 0 26px #ff950055}
+.connect-card form button{background:linear-gradient(100deg,#ff202e,#ed4111);box-shadow:0 7px 22px #ff202e65}
+.connect-eyebrow{color:#ffc107!important}
+@media(max-width:767px){.admin-shell{background:linear-gradient(145deg,#18090b,#300e0e 60%,#10090b)}}
+
+/* Reference-inspired restaurant atmosphere: reuse the project's existing artwork. */
+.admin-shell{position:relative;isolation:isolate}
+.admin-shell::before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(100deg,#120408ed 15%,#1c070be3 65%,#1a0708c7),url('./assets/brand/burger-house-background.png') center/cover no-repeat;opacity:.58}
+.admin-sidebar{box-shadow:8px 0 38px #0008}
+.admin-sidebar .brand-symbol{overflow:hidden}
+.admin-sidebar .brand-symbol img{width:100%;height:100%;object-fit:cover}
+.admin-nav-item.active{background:linear-gradient(100deg,#ff202e,#9b0817);color:#fff;box-shadow:0 4px 20px #ff202e55}
+.admin-nav-item.active b{background:#fff;color:#ae1020}
+.admin-nav-item:hover:not(.active){background:#ff950020}
+.admin-topbar .store-status-toggle.is-open{background:#00d46a1c;border-color:#00d46a80;color:#64ffad}
+.admin-content{position:relative}
+.orders-workbench .orders-overview>div:first-child{border-color:#ff202eaa!important}
+.orders-workbench .orders-overview>div:nth-child(2){box-shadow:inset 0 3px 0 #ff9500}
+.orders-workbench .orders-overview>div:nth-child(3){box-shadow:inset 0 3px 0 #8b24ff}
+.orders-workbench .orders-overview>div:nth-child(4){box-shadow:inset 0 3px 0 #087cff}
+.orders-workbench .delivery-order-card{backdrop-filter:blur(12px)}
+.orders-workbench .order-card-accent{box-shadow:0 0 16px var(--order-accent,#ff202e)}
+.orders-workbench .order-status{font-weight:800;text-shadow:0 0 14px color-mix(in srgb,var(--order-accent,#ff202e) 35%,transparent)}
+.orders-workbench .order-primary{min-height:40px;border-radius:10px}
+.orders-workbench .order-primary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.connect-page{position:relative;isolation:isolate;overflow:hidden}
+.connect-page::before{content:"";position:absolute;z-index:-2;inset:0;background:linear-gradient(95deg,#160406d9,#1c060bc9 60%,#1b0606d5),url('./assets/brand/burger-house-background.png') center/cover no-repeat;opacity:.85}
+.connect-page::after{content:"";position:absolute;z-index:-1;inset:auto -15% -36% -15%;height:70%;background:radial-gradient(ellipse,#ff6a001f,transparent 60%);pointer-events:none}
+.connect-card{position:relative;z-index:1;backdrop-filter:blur(18px);width:min(100%,500px)}
+.connect-card::before{content:"";position:absolute;inset:0 0 auto;height:4px;border-radius:24px 24px 0 0;background:linear-gradient(90deg,#ff202e,#ff9500,#ffc107)}
+.connect-card h1{font-size:clamp(28px,4vw,38px);letter-spacing:-1px}
+.connect-card input{min-height:46px}
+.connect-card form button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px}
+@media(min-width:1000px){
+ .connect-page{grid-template-columns:minmax(0,1fr) minmax(360px,480px);gap:clamp(30px,6vw,120px);padding:5vw max(5vw,32px)}
+ .connect-page::after{content:"BURGE HOUSE";font-weight:1000;font-size:clamp(55px,7vw,130px);letter-spacing:-.07em;color:#fff;text-shadow:0 10px 50px #000;position:relative;inset:auto;height:auto;background:none;align-self:center;justify-self:center;grid-column:1;grid-row:1;white-space:nowrap;opacity:.95}
+ .connect-card{grid-column:2;grid-row:1}
+}
+@media(max-width:999px){.connect-page{display:grid;place-items:center}.connect-card{margin-inline:auto}}
