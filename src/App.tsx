@@ -45,6 +45,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
   isAdmDonoRoute,
 }) => {
   const connection = useConnect();
+  const whatsappMode = window.location.pathname.startsWith('/whatsapp') || window.location.hash.startsWith('#/whatsapp');
   const [legalPage, setLegalPage] = useState<LegalPageKind | null>(null);
   useEffect(() => {
     const sync = () => { const hash = window.location.hash; setLegalPage(hash === '#/privacidade' ? 'privacy' : hash === '#/termos' ? 'terms' : null); };
@@ -111,6 +112,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
       <div className="burger-house-content w-full max-w-none min-h-screen flex flex-col relative pb-24 md:pb-16 shadow-2xl">
         {/* Sticky Header */}
         <Header />
+        {whatsappMode && <div className="mx-3 mt-3 rounded-2xl border border-green-700 bg-green-950/60 p-3 text-sm"><strong className="block text-green-300">Versão WhatsApp · Sem painel de pedidos</strong>Mesmo cardápio da Burger House. Ao finalizar, uma mensagem é preparada no WhatsApp; o cliente precisa enviá-la. Nenhum pedido é salvo no painel nesta versão. Esta é uma demonstração fictícia.</div>}
 
         {/* Customer Screens Router */}
         <main className="flex-1 w-full px-3 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 py-3 sm:py-6 lg:py-8">
@@ -120,6 +122,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
           {customerView === 'home' && (
             <div className="space-y-4">
               <div role="note" className="rounded-xl border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-xs leading-relaxed text-amber-100"><strong className="block text-sm">🍔 Ambiente de demonstração NovaesWeb</strong>Esta hamburgueria é fictícia. Produtos, pedidos e valores são exemplos; nenhuma compra, cobrança ou entrega real será realizada. Utilize somente dados fictícios nos testes.</div>
+              <div className="grid grid-cols-2 gap-2"><a href="/" className="rounded-xl border border-neutral-700 p-3 text-center text-sm font-bold">Com painel</a><a href="/whatsapp" className="rounded-xl border border-green-700 p-3 text-center text-sm font-bold text-green-300">Direto WhatsApp</a></div>
               <Banner />
               {siteSettings.customerNoticeEnabled && !!siteSettings.customerNotice?.trim() && <div role="status" className="rounded-xl border border-amber-500/60 bg-amber-950/70 px-4 py-3 text-sm font-semibold text-amber-100">📢 {siteSettings.customerNotice}</div>}
 
@@ -165,15 +168,15 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
           {customerView === 'checkout' && <CheckoutView />}
 
           {/* SCREEN 6: ORDER STATUS TIMELINE */}
-          {customerView === 'order-status' && (
+          {!whatsappMode && customerView === 'order-status' && (
             <OrderStatusView />
           )}
 
           {/* SCREEN 7: ORDER DELIVERED CELEBRATION */}
-          {customerView === 'order-delivered' && <DeliveredView />}
+          {!whatsappMode && customerView === 'order-delivered' && <DeliveredView />}
 
           {/* MY ORDERS LIST */}
-          {customerView === 'my-orders' && <CustomerOrdersView />}
+          {!whatsappMode && customerView === 'my-orders' && <CustomerOrdersView />}
 
           </>}
           {/* PUBLIC FOOTER */}
