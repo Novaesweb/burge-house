@@ -168,3 +168,29 @@
   opacity:1!important;
 }
 @media(prefers-reduced-motion:reduce){.orders-workbench .delivery-order-card{transition:none}}
+
+/* Login with prominent burger photography, matching the reference mockup. */
+.connect-page{
+  min-height:100dvh;
+  background:#120506!important;
+}
+.connect-page::before{
+  position:fixed!important;inset:0!important;z-index:-2!important;
+  background-image:linear-gradient(90deg,#11040744 0%,#16040755 40%,#100305a6 100%),url('./assets/brand/burger-house-background.png')!important;
+  background-size:cover!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  opacity:1!important;
+}
+.connect-card{
+  background:linear-gradient(160deg,#2b0d0ce8,#120a0bed 70%,#321409e8)!important;
+  border:1px solid #ff9500b3!important;
+  box-shadow:0 18px 70px #000c,0 0 35px #ff202e66!important;
+}
+.connect-card::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  border-radius:inherit;box-shadow:inset 0 0 22px #ff95001c;
+}
+@media(max-width:999px){
+  .connect-page::before{background-position:32% center!important;background-image:linear-gradient(180deg,#10030633,#1003067a 42%,#100306a8),url('./assets/brand/burger-house-background.png')!important}
+}
