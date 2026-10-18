@@ -471,6 +471,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     paymentMethod: 'pix' | 'credit_card' | 'cash';
     paymentChange?: string;
+    couponCode?: string;
     notes?: string;
   }): Promise<Order> => {
     if (cart.length === 0) {
