@@ -29,6 +29,7 @@ import { AdminReviews } from './components/admin/AdminReviews';
 import { AdminProducts } from './components/admin/AdminProducts';
 import { AdminCategories } from './components/admin/AdminCategories';
 import { AdminCustomers } from './components/admin/AdminCustomers';
+import { AdminMarketing } from './components/admin/AdminMarketing';
 import { AdminSales } from './components/admin/AdminSales';
 import { AdminReports } from './components/admin/AdminReports';
 import { AdminSettings } from './components/admin/AdminSettings';
@@ -88,6 +89,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
         {adminView === 'products' && <AdminProducts />}
         {adminView === 'categories' && <AdminCategories />}
         {adminView === 'customers' && <AdminCustomers />}
+        {adminView === 'marketing' && <AdminMarketing />}
         {adminView === 'sales' && <AdminSales />}
         {adminView === 'reports' && <AdminReports />}
         {adminView === 'reviews' && <AdminReviews />}
