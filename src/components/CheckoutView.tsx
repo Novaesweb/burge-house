@@ -25,13 +25,11 @@ export const CheckoutView: React.FC = () => {
     siteId,
     cartSubtotal,
     cartTotal,
-    cart,
     siteSettings,
     handleCheckoutOrder,
     setCustomerView,
   } = useStore();
 
-  const whatsappMode = window.location.pathname.startsWith('/whatsapp') || window.location.hash.startsWith('#/whatsapp');
   const customerKey = (phoneNumber: string) => `delivery:customer:${siteId}:${phoneNumber.replace(/\D/g,'')}`;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState(() => localStorage.getItem(`delivery:customer-phone:${siteId}`) || '');
@@ -101,7 +99,6 @@ export const CheckoutView: React.FC = () => {
   };
 
   const checkCoupon = async () => {
-    if (whatsappMode) {setCouponFeedback('Cupons são demonstrados somente na versão com painel.');return;}
     const requestId = ++couponRequestId.current;
     setCouponLoading(true); setCouponFeedback('');
     try {
@@ -120,7 +117,7 @@ export const CheckoutView: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!whatsappMode && !scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
+    if (!scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
     if (!name.trim()) {
       setErrorMsg('Por favor informe seu nome.');
       return;
@@ -141,20 +138,7 @@ export const CheckoutView: React.FC = () => {
     try {
       setIsSubmitting(true);
       setErrorMsg('');
-      if (whatsappMode) {
-        const target = (siteSettings.phone || '').replace(/\D/g, '');
-        if (target.length < 10 || target.length > 15) throw new Error('WhatsApp da loja não configurado. Configure um telefone válido antes de usar esta demonstração.');
-        const lines = cart.map((item, index) => {
-          const addons = (item.selectedAddons || []).map(a => '  + ' + a.name + ' (' + formatBRL(a.price) + ')').join('\n');
-          return [String(index+1) + '. ' + item.quantity + 'x ' + item.product.name + ' — ' + formatBRL(item.itemUnitPrice ?? item.product.price),addons,item.meatPoint ? '  Ponto: ' + item.meatPoint : '',(item.removals||[]).length ? '  Retirar: ' + (item.removals||[]).join(', ') : '',item.notes ? '  Obs.: ' + item.notes : ''].filter(Boolean).join('\n');
-        });
-        const msg = ['*DEMONSTRAÇÃO NOVAESWEB — PEDIDO NÃO REAL*','*'+siteSettings.name+'*','',...lines,'','Subtotal: '+formatBRL(cartSubtotal),'Entrega estimada: '+formatBRL(siteSettings.deliveryFee || 0),'Total estimado: '+formatBRL(cartTotal),'','Cliente: '+name,'Telefone: '+phone,'Endereço: '+street+', '+number+(complement ? ' — '+complement : '')+', '+neighborhood,'Pagamento: '+(paymentMethod==='pix'?'Pix':paymentMethod==='cash'?'Dinheiro':'Cartão'),paymentMethod==='cash'&&paymentChange?'Troco para: '+paymentChange:'',notes?'Observações: '+notes:'','*Demonstração: confirmar itens, valores e disponibilidade antes de aceitar.*'].filter(Boolean).join('\n');
-        const url='https://wa.me/'+target+'?text='+encodeURIComponent(msg);
-        const opened=window.open(url,'_blank','noopener,noreferrer');
-        if(!opened){window.location.assign(url);return;}
-        localStorage.setItem(customerKey(phone),JSON.stringify({name:name.trim(),cep,street:street.trim(),number:number.trim(),complement:complement.trim(),neighborhood:neighborhood.trim()}));
-        return;
-      }
+
       await handleCheckoutOrder({
         customerName: name,
         customerPhone: phone,
@@ -195,10 +179,10 @@ export const CheckoutView: React.FC = () => {
         </button>
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight">
-            {whatsappMode ? 'Finalizar pelo WhatsApp' : 'Finalizar Pedido'}
+            Finalizar Pedido
           </h2>
           <p className="text-xs text-neutral-400 font-medium">
-            {whatsappMode ? 'Esta versão monta uma mensagem no WhatsApp, sem registrar pedido no painel.' : isRemoteStore(siteId) ? 'Preencha seus dados para entrega.' : 'A loja ainda está em preparação. Pedidos estarão disponíveis após a aprovação do cadastro.'}
+            {isRemoteStore(siteId) ? 'Preencha seus dados para entrega.' : 'A loja ainda está em preparação. Pedidos estarão disponíveis após a aprovação do cadastro.'}
           </p>
         </div>
       </div>
