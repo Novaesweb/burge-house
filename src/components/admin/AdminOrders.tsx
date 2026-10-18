@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Package, Search, CheckCircle2, Bike, Clock, MapPin, User, X, Printer, MessageCircle, Volume2, LayoutGrid, List, ArrowRight, DollarSign, BellRing, Star } from 'lucide-react';
+import { requireSupabase } from '../../lib/supabase';
+import { Package, Search, CheckCircle2, Bike, Clock, MapPin, User, X, Printer, MessageCircle, Volume2, LayoutGrid, List, ArrowRight, DollarSign, BellRing, Star, Trash2 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import type { Order, OrderStatus } from '../../types';
 import { OrderReceiptModal } from './OrderReceiptModal';
@@ -16,6 +17,10 @@ export const AdminOrders: React.FC = () => {
   const [searchQuery,setSearchQuery]=useState('');
   const [selectedOrder,setSelectedOrder]=useState<Order|null>(null);
   const [receiptOrder,setReceiptOrder]=useState<Order|null>(null);
+  const [deleteOrder,setDeleteOrder]=useState<Order|null>(null);
+  const [deletePassword,setDeletePassword]=useState('');
+  const [deleting,setDeleting]=useState(false);
+  const [deleteError,setDeleteError]=useState('');
   const [autoPrintOnAccept,setAutoPrintOnAccept]=useState(()=>localStorage.getItem('auto_print_on_accept')!=='false');
   const [currentTime,setCurrentTime]=useState(Date.now());
   const [busyIds,setBusyIds]=useState<string[]>([]);
@@ -25,7 +30,7 @@ export const AdminOrders: React.FC = () => {
   const previousSite=useRef(siteId);
   useEffect(()=>{const timer=setInterval(()=>setCurrentTime(Date.now()),30000);return()=>clearInterval(timer);},[]);
   useEffect(()=>{if(selectedAdminOrder){if(selectedAdminOrder.siteId===siteId)setSelectedOrder(selectedAdminOrder);setSelectedAdminOrder(null);}},[selectedAdminOrder,setSelectedAdminOrder,siteId]);
-  useEffect(()=>{if(previousSite.current!==siteId){setSelectedOrder(null);setReceiptOrder(null);setError('');previousSite.current=siteId;}},[siteId]);
+  useEffect(()=>{if(previousSite.current!==siteId){setSelectedOrder(null);setReceiptOrder(null);setDeleteOrder(null);setDeletePassword('');setError('');previousSite.current=siteId;}},[siteId]);
   useEffect(()=>{if(selectedOrder){const fresh=orders.find(order=>order.id===selectedOrder.id);if(fresh)setSelectedOrder(fresh);}},[orders,selectedOrder?.id]);
   useEffect(()=>{
     if(!selectedOrder)return;
@@ -57,6 +62,19 @@ export const AdminOrders: React.FC = () => {
     if(status==='preparando'&&target?.status==='recebido'&&autoPrintOnAccept)setReceiptOrder({...target,status});
   });
   const handleTogglePayment=(orderId:string,currentPaid:boolean)=>perform(orderId,()=>toggleOrderPaymentAction(orderId,!currentPaid));
+  const confirmDeleteOrder=async(event:React.FormEvent)=>{
+    event.preventDefault();
+    if(!deleteOrder||!deletePassword||deleting)return;
+    setDeleting(true);setDeleteError('');
+    try{
+      const {data,error}=await requireSupabase().rpc('delivery_delete_order',{p_store_id:siteId,p_order_id:deleteOrder.id,p_password:deletePassword});
+      if(error||data!==true)throw new Error(error?.message==='INVALID_PASSWORD'?'Senha incorreta.':error?.message==='NOT_AUTHORIZED'?'Somente o proprietário pode excluir pedidos.':'Não foi possível excluir o pedido. Confira a senha e tente novamente.');
+      setSelectedOrder(null);setDeleteOrder(null);setDeletePassword('');
+      window.dispatchEvent(new Event('delivery:refresh'));
+      window.location.reload();
+    }catch(err){setDeleteError(err instanceof Error?err.message:'Erro ao excluir pedido.');}
+    finally{setDeleting(false);}
+  };
   const openWhatsAppCustomer=(order:Order)=>{
     const number=whatsappNumber(order.customerPhone);if(!number)return;
     const messages:Record<string,string>={recebido:'foi recebido',preparando:'está em preparo',itens_separados:'está separado',esperando_motoboy:'está aguardando motoboy',saiu_para_entrega:'está a caminho',entregue:'foi entregue',cancelado:'foi cancelado'};
@@ -72,6 +90,7 @@ export const AdminOrders: React.FC = () => {
     {error&&<div className="order-error" role="alert">{error}<button aria-label="Fechar erro" onClick={()=>setError('')}><X size={16}/></button></div>}
     <section className="orders-control-panel" aria-label="Filtros de pedidos"><div className="order-status-filters" role="group" aria-label="Filtrar por status"><button className={`status-filter tone-gray ${selectedStatusFilter==='todos'?'is-selected':''}`} aria-pressed={selectedStatusFilter==='todos'} onClick={()=>setSelectedStatusFilter('todos')}><span>Todos</span><b>{orders.length}</b></button>{ORDER_STAGES.map(stage=><button key={stage.id} className={`status-filter tone-${stage.tone} ${selectedStatusFilter===stage.id?'is-selected':''}`} aria-pressed={selectedStatusFilter===stage.id} onClick={()=>setSelectedStatusFilter(stage.id)}><span><i/>{stage.label}</span><b>{counts[stage.id]}</b></button>)}</div><div className="orders-search-row"><label className="order-search"><Search size={18}/><span className="sr-only">Buscar pedido, cliente ou telefone</span><input value={searchQuery} onChange={event=>setSearchQuery(event.target.value)} placeholder="Buscar pedido, cliente ou telefone"/>{searchQuery&&<button aria-label="Limpar busca" onClick={()=>setSearchQuery('')}><X size={16}/></button>}</label><span className="order-results" aria-live="polite">{filteredOrders.length} {filteredOrders.length===1?'pedido':'pedidos'}</span><div className="order-view-toggle" role="group" aria-label="Visualização"><button aria-label="Visualização em cartões" aria-pressed={viewMode==='cards'} className={viewMode==='cards'?'is-selected':''} onClick={()=>changeView('cards')}><LayoutGrid size={17}/><span>Cartões</span></button><button aria-label="Visualização em lista" aria-pressed={viewMode==='list'} className={viewMode==='list'?'is-selected':''} onClick={()=>changeView('list')}><List size={18}/><span>Lista</span></button></div></div></section>
     {filteredOrders.length>0?<div className={`delivery-orders-grid ${viewMode==='list'?'is-list':''}`} aria-label="Pedidos da loja">{filteredOrders.map(order=><OrderCard key={order.id} order={order} now={currentTime} list={viewMode==='list'} busy={busyIds.includes(order.id)} onAdvance={()=>{const next=nextOrderAction(order.status);if(next)void handleStatusChange(order.id,next.status);}} onPayment={()=>void handleTogglePayment(order.id,!!order.isPaid)} onDetails={()=>setSelectedOrder(order)} onPrint={()=>setReceiptOrder(order)} onWhatsApp={()=>openWhatsAppCustomer(order)}/>)}</div>:<div className="orders-empty"><Package size={34}/><h2>Nenhum pedido por aqui</h2><p>{searchQuery||selectedStatusFilter!=='todos'?'Tente outro status ou ajuste a busca.':'Os pedidos recebidos aparecerão aqui automaticamente.'}</p>{(searchQuery||selectedStatusFilter!=='todos')&&<button onClick={()=>{setSearchQuery('');setSelectedStatusFilter('todos');}}>Ver todos os pedidos</button>}</div>}
+      {deleteOrder && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4" role="presentation"><form onSubmit={e=>void confirmDeleteOrder(e)} role="dialog" aria-modal="true" aria-label="Confirmar exclusão de pedido" className="w-full max-w-md rounded-2xl border border-red-700 bg-neutral-900 p-6 space-y-4 text-white"><h3 className="text-xl font-black text-red-400">Excluir pedido #{deleteOrder.orderNumber}?</h3><p className="text-sm text-neutral-300">Esta ação é permanente e remove o pedido do painel e do banco de dados. Somente o proprietário pode confirmar usando a senha da própria conta.</p><label className="block text-sm font-bold" htmlFor="delete-order-password">Senha do proprietário</label><input id="delete-order-password" type="password" autoComplete="current-password" required value={deletePassword} onChange={e=>setDeletePassword(e.target.value)} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3" placeholder="Digite sua senha" />{deleteError&&<p role="alert" className="text-red-400 text-sm">{deleteError}</p>}<div className="flex gap-3"><button type="button" disabled={deleting} onClick={()=>{setDeleteOrder(null);setDeletePassword('');setDeleteError('');}} className="flex-1 rounded-xl bg-neutral-700 p-3 font-bold">Cancelar</button><button type="submit" disabled={deleting||!deletePassword} className="flex-1 rounded-xl bg-red-600 p-3 font-bold disabled:opacity-50">{deleting?'Excluindo...':'Excluir pedido'}</button></div></form></div>}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
           <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="order-dialog-title" tabIndex={-1} className="order-detail-dialog w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative my-auto space-y-5">
@@ -92,6 +111,12 @@ export const AdminOrders: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {setDeleteOrder(selectedOrder);setDeletePassword('');setDeleteError('');}}
+                  className="p-2.5 rounded-xl bg-red-950 hover:bg-red-900 text-red-300 transition-colors"
+                  title="Excluir pedido com senha"
+                  aria-label="Excluir pedido com senha"
+                ><Trash2 className="w-4 h-4" /></button>
                 <button
                   onClick={() => setReceiptOrder(selectedOrder)}
                   className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-colors"
