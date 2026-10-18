@@ -36,6 +36,10 @@ export const AdminSettings: React.FC = () => {
   const [phone, setPhone] = useState(siteSettings.phone);
   const [address, setAddress] = useState(siteSettings.address);
   const [openingHours, setOpeningHours] = useState(siteSettings.openingHours);
+  const [autoHoursEnabled, setAutoHoursEnabled] = useState(siteSettings.autoHoursEnabled ?? false);
+  const [weeklySchedule, setWeeklySchedule] = useState<Record<string, {enabled:boolean;open:string;close:string}>>(() =>
+    Object.fromEntries(Array.from({length:7},(_,day)=>[String(day),siteSettings.weeklySchedule?.[String(day)] ?? {enabled:day!==0,open:'10:00',close:'23:00'}])));
+  const weekDays = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const [deliveryFee, setDeliveryFee] = useState(siteSettings.deliveryFee.toString());
   const [isOpen, setIsOpen] = useState(siteSettings.isOpen);
   const [upsellEnabled, setUpsellEnabled] = useState(siteSettings.upsellEnabled ?? false);
@@ -83,6 +87,8 @@ export const AdminSettings: React.FC = () => {
         phone,
         address,
         openingHours,
+        autoHoursEnabled,
+        weeklySchedule,
         upsellEnabled,
         upsellProductIds,
         deliveryFee: parseFloat(deliveryFee.replace(',', '.')) || 0,
@@ -200,6 +206,22 @@ export const AdminSettings: React.FC = () => {
               />
             </div>
 
+            <div className="sm:col-span-2 rounded-2xl bg-neutral-950 border border-neutral-800 p-4 space-y-3">
+              <label className="flex gap-3 items-center text-white font-bold">
+                <input type="checkbox" checked={autoHoursEnabled} onChange={e=>setAutoHoursEnabled(e.target.checked)} />
+                Abrir e fechar automaticamente conforme a semana
+              </label>
+              <p className="text-xs text-neutral-400">Horário de Brasília. O botão de aberto/fechado abaixo funciona como bloqueio manual: se estiver fechado, a loja não aceita pedidos mesmo dentro do horário.</p>
+              {weekDays.map((label,index)=>{
+                const key=String(index);const day=weeklySchedule[key];
+                return <div key={key} className="flex flex-wrap gap-2 items-center text-sm text-neutral-300">
+                  <label className="w-28 flex gap-2 items-center"><input type="checkbox" checked={day.enabled} onChange={e=>setWeeklySchedule(prev=>({...prev,[key]:{...prev[key],enabled:e.target.checked}}))}/>{label}</label>
+                  <input aria-label={`Abertura ${label}`} type="time" value={day.open} disabled={!day.enabled} onChange={e=>setWeeklySchedule(prev=>({...prev,[key]:{...prev[key],open:e.target.value}}))} className="bg-neutral-900 border border-neutral-700 rounded-lg p-2"/>
+                  <span>até</span>
+                  <input aria-label={`Fechamento ${label}`} type="time" value={day.close} disabled={!day.enabled} onChange={e=>setWeeklySchedule(prev=>({...prev,[key]:{...prev[key],close:e.target.value}}))} className="bg-neutral-900 border border-neutral-700 rounded-lg p-2"/>
+                </div>;
+              })}
+            </div>
             {/* Aberto / Fechado Switch */}
             <div className="sm:col-span-2 pt-2 flex items-center justify-between p-4 rounded-2xl bg-neutral-950 border border-neutral-800">
               <div>
