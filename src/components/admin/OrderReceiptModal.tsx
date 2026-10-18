@@ -35,12 +35,12 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-      <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-5 shadow-2xl relative my-auto">
+      <div role="dialog" aria-modal="true" aria-labelledby="receipt-dialog-title" className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-5 shadow-2xl relative my-auto">
         {/* Controls - Hidden during print */}
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-800 print:hidden">
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-red-500" />
-            <h3 className="text-base font-black text-white">Comanda de Impressão</h3>
+            <h3 id="receipt-dialog-title" className="text-base font-black text-white">Comanda de Impressão</h3>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -52,6 +52,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              aria-label="Fechar comanda"
               className="w-8 h-8 rounded-full bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center"
             >
               <X className="w-4 h-4" />
@@ -70,7 +71,7 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
               {settings.name}
             </h2>
             <p className="text-[10px] text-neutral-600 mt-0.5">{settings.address}</p>
-            <p className="text-[10px] text-neutral-600">Tel: {settings.phone || '(11) 98765-4321'}</p>
+            <p className="text-[10px] text-neutral-600">Tel: {settings.phone || 'Não informado'}</p>
             <div className="mt-1 text-[11px] font-bold">
               PEDIDO #{order.id.slice(-5).toUpperCase()}
             </div>

@@ -24,6 +24,7 @@ import { PasswordSetupGate } from './components/admin/PasswordSetupGate';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminOrders } from './components/admin/AdminOrders';
+import { AdminReviews } from './components/admin/AdminReviews';
 import { AdminProducts } from './components/admin/AdminProducts';
 import { AdminCategories } from './components/admin/AdminCategories';
 import { AdminCustomers } from './components/admin/AdminCustomers';
@@ -75,7 +76,6 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
     if (connection.loading || !connection.session || !connection.store) return <ConnectGate />;
     return (
       <AdminLayout>
-        <AudioNotificationBanner />
         {adminView === 'dashboard' && <AdminDashboard />}
         {adminView === 'orders' && <AdminOrders />}
         {adminView === 'products' && <AdminProducts />}
@@ -83,6 +83,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
         {adminView === 'customers' && <AdminCustomers />}
         {adminView === 'sales' && <AdminSales />}
         {adminView === 'reports' && <AdminReports />}
+        {adminView === 'reviews' && <AdminReviews />}
         {adminView === 'settings' && <AdminSettings />}
         {adminView === 'support' && <AdminSupport />}
       </AdminLayout>

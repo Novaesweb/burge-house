@@ -18,6 +18,7 @@ export const OrderRatingCard: React.FC<OrderRatingCardProps> = ({ order }) => {
   const [comment, setComment] = useState<string>(order.review?.comment || '');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(!!order.review);
+  const [error, setError] = useState('');
 
   const foodLabels: Record<number, string> = {
     1: '😞 Muito Ruim',
@@ -41,6 +42,7 @@ export const OrderRatingCard: React.FC<OrderRatingCardProps> = ({ order }) => {
 
     try {
       setIsSubmitting(true);
+      setError('');
       const review: OrderReview = {
         foodRating,
         deliveryRating,
@@ -61,7 +63,7 @@ export const OrderRatingCard: React.FC<OrderRatingCardProps> = ({ order }) => {
         });
       } catch (e) {}
     } catch (err) {
-      console.error('Error submitting review:', err);
+      setError('Não foi possível enviar sua avaliação. Confira a conexão e tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -149,6 +151,7 @@ export const OrderRatingCard: React.FC<OrderRatingCardProps> = ({ order }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
         {/* Rating 1: A Comida */}
         <div className="space-y-1.5 p-3 rounded-2xl bg-black/50 border border-neutral-850">
           <div className="flex items-center justify-between">
@@ -222,6 +225,7 @@ export const OrderRatingCard: React.FC<OrderRatingCardProps> = ({ order }) => {
           </label>
           <textarea
             value={comment}
+            maxLength={1000}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Ex: O lanche estava maravilhoso e chegou super quentinho e rápido!"
             rows={2}
