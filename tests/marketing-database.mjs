@@ -26,6 +26,7 @@ await q("insert into managed_sites values($1,'active'),($2,'active')",[S,B]);
 await q("insert into store_members values($1,$2,'owner',true),($3,$4,'owner',true)",[S,U,B,OTHER]);
 await q("insert into delivery_orders values($1,$2,encode(sha256(convert_to($3,'UTF8')),'hex'),$4,now()-interval '35 days')",[ORDER,S,TOKEN,{customerName:'Cliente fixture',customerPhone:P}]);
 await db.exec(await readFile(new URL('../supabase/migrations/20261018131153_marketing_consent_queue.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261018162650_marketing_verified_phone_and_audience.sql',import.meta.url),'utf8'));
 await test('migração não ativa nem cria configurações de lojas',async()=>assert.equal((await one('select count(*)::int n from marketing_private.settings')).n,0));
 await q("insert into marketing_private.settings(store_id,worker_hash,whatsapp_phone,consent_enabled) values($1,encode(sha256(convert_to($2,'UTF8')),'hex'),'5551999990000',true),($3,repeat('c',64),'5551999992222',true)",[S,SECRET,B]);
 await test('anônimos não leem tabelas nem usam painel',async()=>{
@@ -39,13 +40,26 @@ await test('compra não é consentimento e segredo de pedido é obrigatório',as
 });
 let request;
 await test('solicitação é idempotente e não confirma inscrição',async()=>{request=await consent();assert.equal(request.state,'pending');assert.equal((await consent()).challenge,request.challenge);assert.equal((await admin('dashboard')).contacts[0].state,'pending');});
+await test('campanha vazia não é preparada nem aprovada',async()=>{
+ await denied(()=>admin('prepare',{request_id:randomUUID(),title:'Sem público',body:'Teste',segment:0}));
+ assert.equal((await admin('dashboard')).campaigns.length,0);
+ const id=randomUUID();await q("insert into marketing_private.campaigns(store_id,id,request_id,title,body,segment,created_by) values($1,$2,$3,'Legado vazio','Teste',0,$4)",[S,id,randomUUID(),U]);
+ await denied(()=>admin('approve',{id,body:'Teste',count:0}));
+ await q('delete from marketing_private.campaigns where store_id=$1 and id=$2',[S,id]);
+});
 const inbound=(id,text,phone=P,time=new Date())=>worker('inbound',{provider_id:id,phone,text,timestamp:time.toISOString()});
 await test('código errado, remetente errado e mensagem anterior não consentem',async()=>{
  await inbound('wrong','ACEITO PROMOCOES '+randomUUID());await inbound('other','ACEITO PROMOCOES '+request.challenge,'5551999992222');await inbound('old','ACEITO PROMOCOES '+request.challenge,P,new Date(Date.now()-60000));
  assert.equal((await admin('dashboard')).contacts[0].state,'pending');
 });
 await test('confirmação com código, telefone e horário válidos registra evidência',async()=>{
- await inbound('right','ACEITO PROMOCOES '+request.challenge);await inbound('right','ACEITO PROMOCOES '+request.challenge);
+ const variant=P.slice(0,4)+P.slice(5);
+ await inbound('right','ACEITO PROMOCOES '+request.challenge,variant);
+ assert.equal((await admin('dashboard')).contacts[0].state,'pending');
+ assert.equal((await worker('consent_target',{challenge:request.challenge})).phone,P);
+ assert.equal(await worker('consent_target',{challenge:randomUUID()}),null);
+ await worker('inbound',{provider_id:'right',phone:P,sender_phone:variant,verification:'evolution_on_whatsapp',text:'ACEITO PROMOCOES '+request.challenge,timestamp:new Date().toISOString()});
+ await inbound('right','ACEITO PROMOCOES '+request.challenge);
  assert.equal((await admin('dashboard')).contacts[0].state,'opted_in');assert.equal((await one("select count(*)::int n from marketing_private.events where kind='consent_confirmed'")).n,1);
 });
 let campaign;const rid=randomUUID();
