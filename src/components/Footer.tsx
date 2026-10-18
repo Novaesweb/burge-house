@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
                 {siteSettings.name}
               </h4>
               <span className="text-[10px] text-red-500 font-semibold tracking-wide">
-                DELIVERY OFICIAL
+                DEMONSTRAÇÃO NOVAESWEB
               </span>
             </div>
           </div>
@@ -53,6 +53,7 @@ export const Footer: React.FC = () => {
           <a href="#/termos" className="text-neutral-300 hover:text-red-400 underline-offset-4 hover:underline">Termos de Uso</a>
           {siteSettings.phone && <a href={`https://wa.me/55${siteSettings.phone.replace(/\\D/g,'') .replace(/^55/,'')}`} target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-red-400">Contato</a>}
         </nav>
+        <p className="text-center text-[11px] text-amber-300/90">Loja fictícia de demonstração. Não realiza vendas nem entregas reais.</p>
         {/* Bottom Credits */}
         <div className="pt-3 mt-3 border-t border-neutral-900/80 flex items-center justify-between gap-2 text-[11px]">
           <div className="text-neutral-400 flex items-center gap-1 font-medium">

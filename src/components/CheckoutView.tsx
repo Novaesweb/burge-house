@@ -506,6 +506,7 @@ export const CheckoutView: React.FC = () => {
             Loja fechada no momento. Confira o horário de funcionamento e volte mais tarde.
           </p>}
           <p className="text-xs leading-relaxed text-neutral-400">Seus dados serão utilizados para registrar, preparar e entregar seu pedido, além de permitir o acompanhamento da compra. Saiba mais na <a href="#/privacidade" className="font-semibold text-red-400 underline underline-offset-2">Política de Privacidade</a> e nos <a href="#/termos" className="font-semibold text-red-400 underline underline-offset-2">Termos de Uso</a>.</p>
+          <p role="note" className="rounded-xl border border-amber-700/60 bg-amber-950/30 px-3 py-2 text-xs text-amber-200"><strong>Pedido de demonstração:</strong> nenhum pagamento ou entrega será realizado. Use somente nome, telefone e endereço fictícios nos testes.</p>
           {/* Submit Button */}
           <button
             type="submit"
@@ -520,7 +521,7 @@ export const CheckoutView: React.FC = () => {
               </span>
             ) : (
               <>
-                <span>{isRemoteStore(siteId) ? 'Confirmar e enviar pedido' : 'Loja em preparação'}</span>
+                <span>{isRemoteStore(siteId) ? 'Enviar pedido de teste' : 'Loja em preparação'}</span>
                 <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
               </>
             )}

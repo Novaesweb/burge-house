@@ -115,6 +115,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
           {/* SCREEN 1: HOME */}
           {customerView === 'home' && (
             <div className="space-y-4">
+              <div role="note" className="rounded-xl border border-amber-500/50 bg-amber-950/40 px-4 py-3 text-xs leading-relaxed text-amber-100"><strong className="block text-sm">🍔 Ambiente de demonstração NovaesWeb</strong>Esta hamburgueria é fictícia. Produtos, pedidos e valores são exemplos; nenhuma compra, cobrança ou entrega real será realizada. Utilize somente dados fictícios nos testes.</div>
               <Banner />
               {siteSettings.customerNoticeEnabled && !!siteSettings.customerNotice?.trim() && <div role="status" className="rounded-xl border border-amber-500/60 bg-amber-950/70 px-4 py-3 text-sm font-semibold text-amber-100">📢 {siteSettings.customerNotice}</div>}
 
