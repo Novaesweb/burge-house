@@ -1,4 +1,6 @@
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+import { readFile,writeFile,rename,unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const labels = {
@@ -43,14 +45,33 @@ export async function deliver(event,cfg,request=fetch) {
     return body?.key?.id ? {state:'sent',code:'ACCEPTED'} : {state:'uncertain',code:'INVALID_RESPONSE'};
   } catch { return {state:'uncertain',code:'NETWORK_OR_TIMEOUT'}; }
 }
-export async function tick(db,cfg,request=fetch) {
-  const {data,error}=await db.rpc('delivery_claim_whatsapp',{p_store_id:cfg.store,p_token:cfg.token});
+export function fileJournal(path) {
+  return {
+    async load() {try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw new Error('JOURNAL_READ_FAILED');}},
+    async save(value) {
+      if(value===null){try{await unlink(path);}catch(error){if(error.code!=='ENOENT')throw new Error('JOURNAL_CLEAR_FAILED');}return;}
+      await writeFile(path+'.tmp',JSON.stringify(value),{mode:0o600});await rename(path+'.tmp',path);
+    },
+  };
+}
+export async function tick(db,cfg,request=fetch,journal={load:async()=>null,save:async()=>{}}) {
+  const job=await journal.load()||{id:randomUUID(),phase:'claim'};
+  await journal.save(job);
+  const {data,error}=await db.rpc('delivery_claim_whatsapp',{p_store_id:cfg.store,p_token:cfg.token,p_claim_id:job.id});
   if(error) throw new Error('CLAIM_FAILED');
-  if(!data?.length) return false;
+  if(!data?.length) {await journal.save(null);return false;}
   const event=data[0];
-  const result=await deliver(event,cfg,request);
+  if(event.state && event.state!=='sending'){await journal.save(null);return false;}
+  let result=job.result;
+  if(job.phase==='dispatching') result={state:'uncertain',code:'RECOVERY_AFTER_DISPATCH'};
+  if(!result) {
+    await journal.save({...job,phase:'dispatching'});
+    result=await deliver(event,cfg,request);
+  }
+  await journal.save({...job,phase:'finish',result});
   const {error:finishError}=await db.rpc('delivery_finish_whatsapp',{p_store_id:cfg.store,p_token:cfg.token,p_id:event.id,p_state:result.state,p_code:result.code});
   if(finishError) throw new Error('ACK_FAILED_REVIEW_REQUIRED');
+  await journal.save(null);
   console.log(JSON.stringify({event:event.id,...result}));
   return true;
 }
@@ -70,9 +91,10 @@ export function database(env,request=fetch) {
 async function main() {
   const cfg=config(process.env);
   const db=database(process.env);
+  const journal=fileJournal(fileURLToPath(new URL('./.claim.json',import.meta.url)));
   let stop=false;
   for(const signal of ['SIGINT','SIGTERM']) process.on(signal,()=>{stop=true;});
-  while(!stop) { await tick(db,cfg); if(!stop) await sleep(2000); }
+  while(!stop) { await tick(db,cfg,fetch,journal); if(!stop) await sleep(2000); }
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   main().catch(error=>{console.error(error.message);process.exitCode=1;});

@@ -25,7 +25,7 @@ Contrato Evolution instalado: POST `/message/sendText/{instance}`, cabeçalho `a
 
 ## Verificação
 
-`node --test --test-isolation=none tests/whatsapp.mjs`: 8 testes locais com banco PostgreSQL embarcado e HTTP simulado. Cobrem modo de teste, autorização do modo de clientes, isolamento de loja, proteção do token, fila transacional, ordem e tratamento de falhas. As verificações existentes de banco, tipos e compilação também passaram.
+`node --test --test-isolation=none tests/whatsapp.mjs`: 10 testes locais com banco PostgreSQL embarcado e HTTP simulado. Cobrem modo de teste, autorização do modo de clientes, isolamento de loja, proteção do token, fila transacional, ordem, recuperação de resposta perdida e tratamento de falhas. As verificações existentes de banco, tipos e compilação também passaram.
 
 O único teste real autorizado foi o pedido temporário #4, evento 1, enviado apenas ao número terminado em 2414. Resultado: fila `sent/ACCEPTED`; consulta somente de leitura na Evolution confirmou `SERVER_ACK` e `DELIVERY_ACK`. O pedido temporário foi removido por ID e marcador exclusivos após a verificação, sem alterar pedidos reais. Nenhum outro destinatário foi usado nos testes.
 
@@ -35,7 +35,9 @@ Para consultar o serviço: `Get-ScheduledTask -TaskName 'NovaesWeb-BurgeHouse-Wh
 
 Claims atômicos usam `FOR UPDATE SKIP LOCKED`. Eventos de um pedido mantêm ordem; voltar a um status anterior depois de outro status gera evento novo. Aceitação pela Evolution não significa entrega: no teste, a entrega foi confirmada separadamente.
 
-Timeout, resposta inválida ou falha HTTP deixam `uncertain`; queda após o claim pode deixar `sending`. Esses estados bloqueiam os próximos eventos daquele pedido até revisão no provedor, para evitar duplicatas. Não há reenvio automático de envios incertos. Falha na consulta ao banco encerra o worker e o supervisor tenta reiniciá-lo após 30 segundos. O serviço se recupera de quedas de rede sem depender da sessão do navegador.
+Após a migration `20261018025321_whatsapp_recoverable_claims.sql`, cada consulta usa um ID persistido em `.claim.json`. Se a resposta do banco se perder, o worker recupera o mesmo evento após reiniciar. O resultado do envio é persistido antes da confirmação no banco, permitindo repetir apenas a confirmação, sem reenviar a mensagem. A confirmação é idempotente. O diário contém apenas o ID da consulta, fase e códigos de resultado.
+
+Timeout, resposta inválida ou falha HTTP na Evolution deixam `uncertain`. Interrupção durante o envio também exige revisão, pois a mensagem pode ter sido aceita. Esses estados bloqueiam os próximos eventos daquele pedido para evitar duplicatas. Não há reenvio automático de envios incertos. Falha na consulta ao banco encerra o worker e o supervisor tenta reiniciá-lo após 30 segundos, retomando o diário salvo. O serviço se recupera de quedas de rede sem depender da sessão do navegador.
 
 Para pausar completamente a coleta, desabilitar a loja em `delivery_private.whatsapp_stores` além de parar o serviço. Antes de retomar, revisar pendências para evitar avisos antigos. Definir retenção e excluir eventos finalizados após o prazo operacional adotado, pois a fila guarda telefone. Nenhuma mudança de status é revertida por indisponibilidade do WhatsApp.
 

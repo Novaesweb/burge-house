@@ -64,6 +64,32 @@ test('claim and acknowledgement failures stop worker',async()=>{
   let calls=0;
   await assert.rejects(()=>tick({rpc:async()=>++calls===1?{data:[event]}:{error:true}},cfg,async()=>({ok:true,json:async()=>({key:{id:'mock'}})})),/ACK_FAILED/);
 });
+test('lost claim response resumes same claim, and lost acknowledgement never resends',async()=>{
+  let saved=null,claimCalls=0,finishCalls=0,sendCalls=0;
+  const journal={load:async()=>saved,save:async(value)=>{saved=value?structuredClone(value):null;}};
+  let firstClaim;
+  const db={rpc:async(name,args)=>{
+    if(name==='delivery_claim_whatsapp') {
+      claimCalls++;firstClaim??=args.p_claim_id;assert.equal(args.p_claim_id,firstClaim);
+      return claimCalls===1?{error:true}:{data:[{...event,state:'sending'}]};
+    }
+    finishCalls++;return finishCalls===1?{error:true}:{data:null};
+  }};
+  const request=async()=>{sendCalls++;return {ok:true,json:async()=>({key:{id:'mock'}})};};
+  await assert.rejects(()=>tick(db,cfg,request,journal),/CLAIM_FAILED/);
+  await assert.rejects(()=>tick(db,cfg,request,journal),/ACK_FAILED/);
+  assert.equal(saved.phase,'finish');
+  await tick(db,cfg,request,journal);
+  assert.equal(sendCalls,1);assert.equal(saved,null);
+});
+test('interrupted dispatch is quarantined without sending again',async()=>{
+  let saved={id:crypto.randomUUID(),phase:'dispatching'};
+  const journal={load:async()=>saved,save:async(value)=>{saved=value;}};
+  let finish;
+  const db={rpc:async(name,args)=>name==='delivery_claim_whatsapp'?{data:[{...event,state:'sending'}]}:(finish=args,{data:null})};
+  await tick(db,cfg,()=>{throw new Error('MUST NOT SEND');},journal);
+  assert.equal(finish.p_state,'uncertain');assert.equal(finish.p_code,'RECOVERY_AFTER_DISPATCH');assert.equal(saved,null);
+});
 test('transactional queue, permissions, ordering and repeated status transitions',async()=>{
   const db=new PGlite();
   try {
@@ -99,5 +125,15 @@ test('transactional queue, permissions, ordering and repeated status transitions
     await db.query("select delivery_finish_whatsapp($1,$2,$3,'sent','ACCEPTED')",[store,token,second.id]);
     await assert.rejects(()=>db.query("select delivery_finish_whatsapp($1,$2,$3,'sent','ACCEPTED')",[store,token,second.id]));
     assert.equal((await claim()).length,0);
+    await db.exec('reset role');
+    await db.exec(await readFile(new URL('../backend/whatsapp/recoverable-claims.sql',import.meta.url),'utf8'));
+    await db.exec("update delivery_orders set status='entregue';set role anon");
+    const claimId=crypto.randomUUID();
+    const recover=async(secret=token)=>(await db.query('select * from delivery_claim_whatsapp($1,$2,$3)',[store,secret,claimId])).rows;
+    const recovered=(await recover())[0];assert.equal(recovered.status,'entregue');
+    assert.equal((await recover())[0].id,recovered.id);
+    await assert.rejects(()=>recover('wrong'));
+    for(let i=0;i<2;i++)await db.query("select delivery_finish_whatsapp($1,$2,$3,'sent','ACCEPTED')",[store,token,recovered.id]);
+    assert.equal((await recover())[0].state,'sent');
   } finally {await db.close();}
 });
