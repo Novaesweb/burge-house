@@ -13,16 +13,11 @@ export function OrderCard({order,now,busy,onAdvance,onPayment,onDetails,onPrint,
   order:Order;now:number;busy:boolean;list?:boolean;onAdvance:()=>void;onPayment:()=>void;onDetails:()=>void;onPrint:()=>void;onWhatsApp:()=>void;
 }) {
   const stage=orderStage(order.status);const isNew=normalizeOrderStatus(order.status)==='recebido';
-  // Stable visual identity: each order keeps its own color regardless of filters or status changes.
-  const palette=['#00D46A','#FF202E','#FFC107','#8B24FF','#087CFF','#FF9500','#FF3CB5'];
-  const identity=String(order.id || order.orderNumber);
-  const colorIndex=Array.from(identity).reduce((hash,char)=>((hash*31+char.charCodeAt(0))>>>0),0)%palette.length;
-  const orderColor=palette[colorIndex];
   const minutes=Math.max(0,Math.floor((now-new Date(order.createdAt).getTime())/60000));
   const next=nextOrderAction(order.status);
   const PaymentIcon=order.paymentMethod==='pix'?QrCode:order.paymentMethod==='cash'?Banknote:CreditCard;
   const payment=order.paymentMethod==='pix'?'Pix':order.paymentMethod==='cash'?'Dinheiro':order.paymentMethod==='credit_card'?'Cartão':order.paymentMethod;
-  return <article className={`delivery-order-card ${isNew?'is-new':''} ${list?'is-list':''}`} data-order-id={order.id} style={{'--order-card-color':orderColor} as React.CSSProperties} aria-label={`Pedido ${order.orderNumber}`}>
+  return <article className={`delivery-order-card tone-${stage?.tone||'gray'} ${isNew?'is-new':''} ${list?'is-list':''}`} data-order-id={order.id} aria-label={`Pedido ${order.orderNumber}`}>
     <div className={`order-card-accent tone-${stage?.tone||'gray'}`}/>
     <header className="order-card-heading"><div><span className="order-eyebrow">PEDIDO</span><strong className="order-number">#{order.orderNumber}</strong></div><div className="order-heading-meta"><OrderStatusBadge status={order.status}/><span className={`order-time ${isNew&&minutes>=15?'is-late':''}`}><Clock size={13}/>{Number.isFinite(minutes)?`${minutes} min`:'Horário indisponível'}</span></div></header>
     <div className="order-customer"><h2>{order.customerName||'Nome não informado'}</h2><div><span>{order.customerPhone||'Telefone não informado'}</span><button className="order-contact" onClick={onWhatsApp} disabled={!order.customerPhone} aria-label={`WhatsApp de ${order.customerName}`}><MessageCircle size={14}/>WhatsApp</button></div></div>
