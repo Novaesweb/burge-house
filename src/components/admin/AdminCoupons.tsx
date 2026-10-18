@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { requireSupabase } from '../../lib/supabase';
 
-type Coupon = { store_id: string; code: string; discount_type: 'percent'|'fixed'; discount_value: number; min_order: number; max_uses: number|null; used_count: number; expires_at: string|null; active: boolean };
+type Coupon = { store_id: string; code: string; discount_type: 'percent'|'fixed'; discount_value: number; min_order: number; max_uses: number|null; used_count: number; expires_at: string|null; starts_at: string|null; active: boolean };
 
 export const AdminCoupons: React.FC = () => {
   const { siteId } = useStore();
@@ -13,6 +13,7 @@ export const AdminCoupons: React.FC = () => {
   const [minimum, setMinimum] = useState('0');
   const [limit, setLimit] = useState('');
   const [expiry, setExpiry] = useState('');
+  const [startsAt, setStartsAt] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -42,10 +43,10 @@ export const AdminCoupons: React.FC = () => {
       if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses <= 0)) throw new Error('Limite de usos inválido.');
       const { error } = await requireSupabase().from('delivery_coupons').insert({
         store_id: siteId, code: normalized, discount_type: kind, discount_value: amount,
-        min_order: min, max_uses: maxUses, expires_at: expiry ? new Date(expiry + 'T23:59:59').toISOString() : null,
+        min_order: min, max_uses: maxUses, starts_at: startsAt ? new Date(startsAt + 'T00:00:00').toISOString() : null, expires_at: expiry ? new Date(expiry + 'T23:59:59').toISOString() : null,
       });
       if (error) throw new Error('Não foi possível cadastrar o cupom. Confira se o código já existe e se você tem acesso.');
-      setCode(''); setValue(''); setLimit(''); setExpiry(''); setRefresh(n => n + 1);
+      setCode(''); setValue(''); setLimit(''); setExpiry(''); setStartsAt(''); setRefresh(n => n + 1);
     } catch (err) { setError(err instanceof Error ? err.message : 'Erro ao salvar cupom.'); }
     finally { setSaving(false); }
   };
