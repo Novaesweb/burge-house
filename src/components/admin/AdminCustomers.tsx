@@ -16,6 +16,8 @@ export const AdminCustomers: React.FC = () => {
   const { customers, orders } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const reviews = orders.filter(order => order.review);
+  const avgFood = reviews.length ? (reviews.reduce((sum, order) => sum + (order.review?.foodRating || 0), 0) / reviews.length).toFixed(1) : '-';
 
   const filteredCustomers = customers.filter(
     (c) =>
@@ -69,6 +71,23 @@ export const AdminCustomers: React.FC = () => {
           <p className="text-2xl font-black text-amber-400">{inactiveCount}</p>
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4">
+          <p className="text-xs text-neutral-400">Avaliações recebidas</p>
+          <p className="text-2xl font-black text-white">{reviews.length}</p>
+        </div>
+        <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4">
+          <p className="text-xs text-neutral-400">Média dos produtos</p>
+          <p className="text-2xl font-black text-amber-400">{avgFood} / 5</p>
+        </div>
+      </div>
+      {reviews.length > 0 && <section className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4 space-y-3">
+        <h2 className="font-bold text-white">Últimas avaliações dos pedidos</h2>
+        {reviews.slice(0, 5).map(order => <div key={order.id} className="rounded-xl bg-neutral-950 p-3">
+          <p className="text-sm font-bold text-white">{order.customerName} · Pedido #{order.orderNumber} · {order.review?.foodRating}/5 estrelas</p>
+          {order.review?.comment && <p className="text-sm text-neutral-300 mt-1">{order.review.comment}</p>}
+        </div>)}
+      </section>}
       {/* Search Bar */}
       <div className="bg-neutral-900 p-4 rounded-2xl border border-neutral-800">
         <div className="relative max-w-md">
