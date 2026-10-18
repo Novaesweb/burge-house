@@ -1,6 +1,6 @@
 import { useConnect } from '../../context/ConnectContext';
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, UtensilsCrossed, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useStore, type AdminView } from '../../context/StoreContext';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
 import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
@@ -16,6 +16,7 @@ const navigation = [
   { id: 'reviews', label: 'Avaliações', icon: Star },
   { id: 'settings', label: 'Configurações', icon: Settings },
   { id: 'support', label: 'Suporte', icon: Headphones },
+  { id: 'extras', label: 'Ferramentas', icon: UtensilsCrossed },
 ] as const;
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { adminView, setAdminView, siteSettings, storeAdmin, updateSettingsAction, orders, setAppMode } = useStore();
