@@ -505,6 +505,7 @@ export const CheckoutView: React.FC = () => {
           {!scheduleOpen && <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/50 p-3 text-sm font-bold text-amber-200">
             Loja fechada no momento. Confira o horário de funcionamento e volte mais tarde.
           </p>}
+          <p className="text-xs leading-relaxed text-neutral-400">Seus dados serão utilizados para registrar, preparar e entregar seu pedido, além de permitir o acompanhamento da compra. Saiba mais na <a href="#/privacidade" className="font-semibold text-red-400 underline underline-offset-2">Política de Privacidade</a> e nos <a href="#/termos" className="font-semibold text-red-400 underline underline-offset-2">Termos de Uso</a>.</p>
           {/* Submit Button */}
           <button
             type="submit"
