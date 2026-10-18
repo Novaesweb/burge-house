@@ -12,6 +12,7 @@ import { DeliveredView } from './components/DeliveredView';
 import { CustomerOrdersView } from './components/CustomerOrdersView';
 import { BottomNav } from './components/BottomNav';
 import { Footer } from './components/Footer';
+import { LegalPage, type LegalPageKind } from './components/LegalPage';
 import { AudioNotificationBanner } from './components/AudioNotificationBanner';
 import { CartToastNotification } from './components/CartToastNotification';
 import { SiteSuspendedScreen } from './components/SiteSuspendedScreen';
@@ -42,6 +43,11 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
   isAdmDonoRoute,
 }) => {
   const connection = useConnect();
+  const [legalPage, setLegalPage] = useState<LegalPageKind | null>(null);
+  useEffect(() => {
+    const sync = () => { const hash = window.location.hash; setLegalPage(hash === '#/privacidade' ? 'privacy' : hash === '#/termos' ? 'terms' : null); };
+    sync(); window.addEventListener('hashchange', sync); return () => window.removeEventListener('hashchange', sync);
+  }, []);
   const {
     customerView,
     setCustomerView,
@@ -104,6 +110,8 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
 
         {/* Customer Screens Router */}
         <main className="flex-1 px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
+          {legalPage && <LegalPage kind={legalPage} onBack={() => { window.location.hash = '#/'; setLegalPage(null); setCustomerView('home'); }} />}
+          {!legalPage && <>
           {/* SCREEN 1: HOME */}
           {customerView === 'home' && (
             <div className="space-y-4">
@@ -162,6 +170,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
           {/* MY ORDERS LIST */}
           {customerView === 'my-orders' && <CustomerOrdersView />}
 
+          </>}
           {/* PUBLIC FOOTER */}
           <Footer />
         </main>
