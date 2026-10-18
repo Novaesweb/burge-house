@@ -48,6 +48,11 @@ export const Footer: React.FC = () => {
           </div>}
         </div>
 
+        <nav aria-label="Informações legais" className="flex flex-wrap justify-center gap-4 border-t border-neutral-900 pt-4 text-xs font-semibold">
+          <a href="#/privacidade" className="text-neutral-300 hover:text-red-400 underline-offset-4 hover:underline">Política de Privacidade</a>
+          <a href="#/termos" className="text-neutral-300 hover:text-red-400 underline-offset-4 hover:underline">Termos de Uso</a>
+          {siteSettings.phone && <a href={`https://wa.me/55${siteSettings.phone.replace(/\\D/g,'') .replace(/^55/,'')}`} target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-red-400">Contato</a>}
+        </nav>
         {/* Bottom Credits */}
         <div className="pt-3 mt-3 border-t border-neutral-900/80 flex items-center justify-between gap-2 text-[11px]">
           <div className="text-neutral-400 flex items-center gap-1 font-medium">
