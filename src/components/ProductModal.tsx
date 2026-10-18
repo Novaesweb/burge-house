@@ -15,40 +15,25 @@ import { useStore } from '../context/StoreContext';
 import { SelectedAddon } from '../types';
 import { formatBRL } from '../utils/formatters';
 
-const DEFAULT_ADDONS: SelectedAddon[] = [
-  { id: 'add-bacon', name: 'Bacon Crocante', price: 5.0 },
-  { id: 'add-cheddar', name: 'Dobro de Queijo Cheddar', price: 5.0 },
-  { id: 'add-burger-extra', name: 'Hambúrguer Extra 160g', price: 8.0 },
-  { id: 'add-molho', name: 'Molho Especial da Casa', price: 3.0 },
-  { id: 'add-cebola-caram', name: 'Cebola Caramelizada', price: 4.0 },
-  { id: 'add-ovo', name: 'Ovo Frito na Chapa', price: 3.0 },
-];
-
 const MEAT_POINTS = [
   { id: 'ao-ponto', label: 'Ao Ponto', desc: 'Vermelhinha e bem suculenta' },
   { id: 'bem-passado', label: 'Bem Passado', desc: 'Mais tostada e firme' },
   { id: 'mal-passado', label: 'Mal Passado', desc: 'Selada no fogo alto' },
 ];
 
-const REMOVABLE_ITEMS = [
-  'Sem Cebola',
-  'Sem Picles',
-  'Sem Tomate',
-  'Sem Alface',
-  'Sem Maionese',
-];
-
 export const ProductModal: React.FC = () => {
   const { selectedProductForModal, setSelectedProductForModal, addToCart } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState('');
-  const [selectedMeatPoint, setSelectedMeatPoint] = useState<string>('Ao Ponto');
+  const [selectedMeatPoint, setSelectedMeatPoint] = useState<string>('ao-ponto');
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [selectedRemovals, setSelectedRemovals] = useState<string[]>([]);
 
   if (!selectedProductForModal) return null;
 
   const product = selectedProductForModal;
+  const availableAddons = product.addons || [];
+  const removableItems = product.removableIngredients || [];
   const isBurger =
     product.categoryId?.includes('burg') ||
     product.name?.toLowerCase().includes('burger') ||
@@ -92,7 +77,7 @@ export const ProductModal: React.FC = () => {
     setNotes('');
     setSelectedAddons([]);
     setSelectedRemovals([]);
-    setSelectedMeatPoint('Ao Ponto');
+    setSelectedMeatPoint('ao-ponto');
   };
 
   return (
@@ -152,12 +137,12 @@ export const ProductModal: React.FC = () => {
 
               <div className="grid grid-cols-3 gap-2">
                 {MEAT_POINTS.map((mp) => {
-                  const isSelected = selectedMeatPoint === mp.label;
+                  const isSelected = selectedMeatPoint === mp.id;
                   return (
                     <button
                       key={mp.id}
                       type="button"
-                      onClick={() => setSelectedMeatPoint(mp.label)}
+                      onClick={() => setSelectedMeatPoint(mp.id)}
                       className={`p-2.5 rounded-2xl border text-center transition-all ${
                         isSelected
                           ? 'bg-red-600/20 border-red-500 text-white ring-1 ring-red-500 shadow-md'
@@ -176,6 +161,7 @@ export const ProductModal: React.FC = () => {
           )}
 
           {/* 2. Adicionais Deliciosos (Custom Extras) */}
+          {availableAddons.length > 0 && (
           <div className="pt-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -188,7 +174,7 @@ export const ProductModal: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {DEFAULT_ADDONS.map((addon) => {
+              {availableAddons.map((addon) => {
                 const isSelected = selectedAddons.some((a) => a.id === addon.id);
                 return (
                   <button
@@ -222,8 +208,10 @@ export const ProductModal: React.FC = () => {
               })}
             </div>
           </div>
+          )}
 
           {/* 3. Remover Ingredientes */}
+          {removableItems.length > 0 && (
           <div className="pt-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -234,7 +222,7 @@ export const ProductModal: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {REMOVABLE_ITEMS.map((item) => {
+              {removableItems.map((item) => {
                 const isRemoved = selectedRemovals.includes(item);
                 return (
                   <button
@@ -253,6 +241,7 @@ export const ProductModal: React.FC = () => {
               })}
             </div>
           </div>
+          )}
 
           {/* 4. Observações */}
           <div className="pt-4 space-y-1.5">

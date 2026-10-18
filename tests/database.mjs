@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { buildOrderRequest } from '../src/utils/checkout.ts';
 const db=new PGlite();
 const root=new URL('../',import.meta.url);
 const sql=async(path)=> (await readFile(new URL(path,root),'utf8')).replace(/^\uFEFF/,'');
@@ -85,6 +86,21 @@ await test('troca de store_id é proibida mesmo para dono de ambas',async()=>{
 const token='a'.repeat(64),tokenB='b'.repeat(64),orderKey='30000000-0000-4000-8000-000000000001';
 const orderRequest={customerName:'Cliente Local',customerPhone:'11988887777',deliveryAddress:{street:'Rua de Teste',number:'1',neighborhood:'Centro'},paymentMethod:'pix',items:[{productId:'product',quantity:2,price:0.01,selectedAddons:[{id:'cheese',price:0}]}],total:0.01,isPaid:true};
 let order;
+await test('checkout converte os três pontos da carne de carrinhos antigos para IDs aceitos pelo banco',async()=>{
+ for(const label of ['Ao Ponto','Bem Passado','Mal Passado']) {
+  await db.exec('begin');
+  try {
+   const request=buildOrderRequest({...orderRequest,items:[{...orderRequest.items[0],meatPoint:label}]});
+   const result=(await role('anon',null,()=>one('select delivery_place_order($1,$2,$3,$4) as result',[storeA,request,crypto.randomUUID(),token]))).result;
+   assert.equal(result.items[0].meatPoint,label.toLowerCase().replaceAll(' ','-'));
+   assert.equal(result.total,46.8);
+  } finally {await db.exec('rollback');}
+ }
+});
+await test('adicional visual não cadastrado continua bloqueado pelo servidor',async()=>{
+ const request=buildOrderRequest({...orderRequest,items:[{...orderRequest.items[0],selectedAddons:[{id:'add-bacon',price:0}]}]});
+ await assert.rejects(()=>role('anon',null,()=>query('select delivery_place_order($1,$2,$3,$4)',[storeA,request,crypto.randomUUID(),token])),/INVALID_ADDON/);
+});
 await test('checkout calcula preço, taxa e pagamento no servidor',async()=>{
  order=(await role('anon',null,()=>one('select delivery_place_order($1,$2,$3,$4) as result',[storeA,orderRequest,orderKey,token]))).result;
  assert.equal(order.total,46.8);assert.equal(order.isPaid,false);assert.equal(order.status,'recebido');assert.equal(order.items[0].price,20.9);

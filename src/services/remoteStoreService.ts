@@ -1,4 +1,5 @@
 import { requireSupabase } from '../lib/supabase';
+import { buildOrderRequest } from '../utils/checkout';
 import type { Category, Product, SiteSettings, Order, Customer, ManualPayment, OrderReview, StoreAdmin, StoreAvailability } from '../types';
 import { DEFAULT_SITE_SETTINGS, DEFAULT_STORE_ADMIN, INITIAL_CATEGORIES, INITIAL_PRODUCTS, DEFAULT_SITE_ID } from './storeDefaults';
 import { readLocal } from '../lib/localStore';
@@ -110,7 +111,7 @@ export function subscribeRemoteOrders(siteId:string,onData:(value:Order[])=>void
   return list.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
 },onData,10_000);}
 export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'orderNumber'|'createdAt'|'updatedAt'>):Promise<Order>{
-  const request={customerName:order.customerName,customerPhone:order.customerPhone,deliveryAddress:order.deliveryAddress,paymentMethod:order.paymentMethod,paymentChange:order.paymentChange,notes:order.notes,items:order.items.map(item=>({productId:item.productId,quantity:item.quantity,notes:item.notes,meatPoint:item.meatPoint,removals:item.removals,selectedAddons:item.selectedAddons?.map(addon=>({id:addon.id}))}))};
+  const request=buildOrderRequest(order);
   const serialized=JSON.stringify(request);const attemptKey=`delivery:checkout-attempt:${siteId}`;
   let saved: {request:string;key:string;token:string}|null=null;
   try{saved=JSON.parse(localStorage.getItem(attemptKey)||'null');}catch{}
@@ -121,6 +122,12 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
     STORE_UNAVAILABLE:'A loja está indisponível.',
     STORE_CLOSED:'A loja está fechada no momento.',
     PRODUCT_UNAVAILABLE:'Um item do carrinho não está mais disponível. Remova-o e adicione-o novamente.',
+    INVALID_ADDON:'Um adicional do carrinho não está cadastrado neste produto. Remova o item e adicione-o novamente.',
+    INVALID_ADDONS:'Os adicionais do item não são válidos. Remova o item e adicione-o novamente.',
+    DUPLICATE_ADDONS:'Um adicional está repetido. Remova o item e adicione-o novamente.',
+    INVALID_MEAT_POINT:'Selecione novamente o ponto da carne do item.',
+    INVALID_REMOVAL:'Uma opção de remoção não está disponível neste produto. Remova o item e adicione-o novamente.',
+    INVALID_REMOVALS:'As opções de remoção não são válidas. Remova o item e adicione-o novamente.',
     ORDER_RATE_LIMIT:'Aguarde alguns minutos antes de enviar outro pedido.',
     INVALID_PAYMENT:'Escolha uma forma de pagamento aceita pela loja.',
     INVALID_CUSTOMER:'Informe seu nome completo.',
