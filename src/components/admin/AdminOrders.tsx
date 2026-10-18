@@ -21,7 +21,8 @@ export const AdminOrders: React.FC = () => {
   const [deletePassword,setDeletePassword]=useState('');
   const [deleting,setDeleting]=useState(false);
   const [deleteError,setDeleteError]=useState('');
-  const [autoPrintOnAccept,setAutoPrintOnAccept]=useState(()=>localStorage.getItem('auto_print_on_accept')!=='false');
+  const [autoPrintOnAccept,setAutoPrintOnAccept]=useState(()=>localStorage.getItem(`auto_print_on_accept:${siteId}`)!=='false');
+  useEffect(()=>setAutoPrintOnAccept(localStorage.getItem(`auto_print_on_accept:${siteId}`)!=='false'),[siteId]);
   const [currentTime,setCurrentTime]=useState(Date.now());
   const [busyIds,setBusyIds]=useState<string[]>([]);
   const busyRef=useRef(new Set<string>());
