@@ -1,8 +1,7 @@
-import { SiteImage } from './SiteImage';
 import React from 'react';
-import { ShoppingBag, Store } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import burgerHouseLogo from '../assets/brand/burger-house-logo.png';
+import burgerHouseWordmark from '../assets/brand/burger-house-wordmark.png';
 
 export const Header: React.FC = () => {
   const { siteSettings, cartCount, setCustomerView, appMode, setAppMode } = useStore();
@@ -18,21 +17,8 @@ export const Header: React.FC = () => {
           }}
           className="flex items-center gap-3 cursor-pointer select-none"
         >
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-amber-600 p-[2px] shadow-lg shadow-red-950/60 flex-shrink-0">
-            <div className="w-full h-full rounded-[14px] bg-black overflow-hidden flex items-center justify-center">
-              <SiteImage
-                src={siteSettings.logoUrl || burgerHouseLogo}
-                alt={siteSettings.name}
-                className="w-full h-full object-cover object-top scale-125"
-              />
-            </div>
-          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black tracking-tight text-white leading-tight">
-                {siteSettings.name}
-              </h1>
-            </div>
+            <img src={burgerHouseWordmark} alt={siteSettings.name} className="h-12 w-[152px] object-contain object-left sm:h-14 sm:w-[218px]" />
             <div className="flex items-center gap-2 mt-0.5">
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950/80 text-red-400 border border-red-800/50">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
