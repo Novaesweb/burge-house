@@ -105,3 +105,38 @@
 .connect-card form button{background:linear-gradient(100deg,#ff202e,#ed4111);box-shadow:0 7px 22px #ff202e65}
 .connect-eyebrow{color:#ffc107!important}
 @media(max-width:767px){.admin-shell{background:linear-gradient(145deg,#18090b,#300e0e 60%,#10090b)}}
+
+/* Reference-inspired restaurant atmosphere: reuse the project's existing artwork. */
+.admin-shell{position:relative;isolation:isolate}
+.admin-shell::before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;background:linear-gradient(100deg,#120408ed 15%,#1c070be3 65%,#1a0708c7),url('./assets/brand/burger-house-background.png') center/cover no-repeat;opacity:.58}
+.admin-sidebar{box-shadow:8px 0 38px #0008}
+.admin-sidebar .brand-symbol{overflow:hidden}
+.admin-sidebar .brand-symbol img{width:100%;height:100%;object-fit:cover}
+.admin-nav-item.active{background:linear-gradient(100deg,#ff202e,#9b0817);color:#fff;box-shadow:0 4px 20px #ff202e55}
+.admin-nav-item.active b{background:#fff;color:#ae1020}
+.admin-nav-item:hover:not(.active){background:#ff950020}
+.admin-topbar .store-status-toggle.is-open{background:#00d46a1c;border-color:#00d46a80;color:#64ffad}
+.admin-content{position:relative}
+.orders-workbench .orders-overview>div:first-child{border-color:#ff202eaa!important}
+.orders-workbench .orders-overview>div:nth-child(2){box-shadow:inset 0 3px 0 #ff9500}
+.orders-workbench .orders-overview>div:nth-child(3){box-shadow:inset 0 3px 0 #8b24ff}
+.orders-workbench .orders-overview>div:nth-child(4){box-shadow:inset 0 3px 0 #087cff}
+.orders-workbench .delivery-order-card{backdrop-filter:blur(12px)}
+.orders-workbench .order-card-accent{box-shadow:0 0 16px var(--order-accent,#ff202e)}
+.orders-workbench .order-status{font-weight:800;text-shadow:0 0 14px color-mix(in srgb,var(--order-accent,#ff202e) 35%,transparent)}
+.orders-workbench .order-primary{min-height:40px;border-radius:10px}
+.orders-workbench .order-primary:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.connect-page{position:relative;isolation:isolate;overflow:hidden}
+.connect-page::before{content:"";position:absolute;z-index:-2;inset:0;background:linear-gradient(95deg,#160406d9,#1c060bc9 60%,#1b0606d5),url('./assets/brand/burger-house-background.png') center/cover no-repeat;opacity:.85}
+.connect-page::after{content:"";position:absolute;z-index:-1;inset:auto -15% -36% -15%;height:70%;background:radial-gradient(ellipse,#ff6a001f,transparent 60%);pointer-events:none}
+.connect-card{position:relative;z-index:1;backdrop-filter:blur(18px);width:min(100%,500px)}
+.connect-card::before{content:"";position:absolute;inset:0 0 auto;height:4px;border-radius:24px 24px 0 0;background:linear-gradient(90deg,#ff202e,#ff9500,#ffc107)}
+.connect-card h1{font-size:clamp(28px,4vw,38px);letter-spacing:-1px}
+.connect-card input{min-height:46px}
+.connect-card form button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px}
+@media(min-width:1000px){
+ .connect-page{grid-template-columns:minmax(0,1fr) minmax(360px,480px);gap:clamp(30px,6vw,120px);padding:5vw max(5vw,32px)}
+ .connect-page::after{content:"BURGE HOUSE";font-weight:1000;font-size:clamp(55px,7vw,130px);letter-spacing:-.07em;color:#fff;text-shadow:0 10px 50px #000;position:relative;inset:auto;height:auto;background:none;align-self:center;justify-self:center;grid-column:1;grid-row:1;white-space:nowrap;opacity:.95}
+ .connect-card{grid-column:2;grid-row:1}
+}
+@media(max-width:999px){.connect-page{display:grid;place-items:center}.connect-card{margin-inline:auto}}
