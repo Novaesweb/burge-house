@@ -29,6 +29,7 @@ export const CheckoutView: React.FC = () => {
     setCustomerView,
   } = useStore();
 
+  const customerKey = (phoneNumber: string) => `delivery:customer:${siteId}:${phoneNumber.replace(/\D/g,'')}`;
   const [name, setName] = useState(() => localStorage.getItem('customer_saved_name') || '');
   const [phone, setPhone] = useState(() => localStorage.getItem('customer_saved_phone') || '');
   const [couponInput, setCouponInput] = useState('');
@@ -43,6 +44,21 @@ export const CheckoutView: React.FC = () => {
   const [number, setNumber] = useState(() => localStorage.getItem('customer_saved_number') || '');
   const [complement, setComplement] = useState(() => localStorage.getItem('customer_saved_complement') || '');
   const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem('customer_saved_neighborhood') || '');
+  useEffect(() => {
+    const digits=phone.replace(/\D/g,'');
+    if (digits.length < 10) return;
+    const saved=localStorage.getItem(customerKey(digits));
+    if (!saved) return;
+    try {
+      const data=JSON.parse(saved);
+      setName(data.name || '');
+      setCep(data.cep || '');
+      setStreet(data.street || '');
+      setNumber(data.number || '');
+      setComplement(data.complement || '');
+      setNeighborhood(data.neighborhood || '');
+    } catch { /* Dados locais inválidos: manter preenchimento manual. */ }
+  }, [phone, siteId]);
   const [isEditingAddress, setIsEditingAddress] = useState(() => !localStorage.getItem('customer_saved_street'));
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
@@ -138,6 +154,8 @@ export const CheckoutView: React.FC = () => {
         paymentChange: paymentMethod === 'cash' ? paymentChange : undefined,
         notes,
       });
+      localStorage.setItem(customerKey(phone),JSON.stringify({name:name.trim(),cep,street:street.trim(),number:number.trim(),complement:complement.trim(),neighborhood:neighborhood.trim()}));
+      localStorage.setItem(`delivery:customer-phone:${siteId}`,phone.replace(/\D/g,''));
     } catch (err: any) {
       setErrorMsg(err instanceof Error ? err.message : 'Não foi possível confirmar o pedido. Tente novamente.');
       console.error(err);
