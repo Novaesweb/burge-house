@@ -157,6 +157,7 @@ interface StoreContextType {
     };
     paymentMethod: 'pix' | 'credit_card' | 'cash';
     paymentChange?: string;
+    couponCode?: string;
     notes?: string;
   }) => Promise<Order>;
 
@@ -494,6 +495,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       deliveryAddress: orderData.deliveryAddress,
       paymentMethod: orderData.paymentMethod,
       paymentChange: orderData.paymentChange,
+      couponCode: orderData.couponCode,
       items,
       subtotal: cartSubtotal,
       deliveryFee: siteSettings.deliveryFee ?? 5.0,
