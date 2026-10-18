@@ -35,8 +35,7 @@ export const AdminCustomers: React.FC = () => {
   const customerOrders = selectedCustomer
     ? orders.filter(
         (o) =>
-          o.customerPhone.replace(/\D/g, '') === selectedCustomer.phone.replace(/\D/g, '') ||
-          o.customerName.toLowerCase() === selectedCustomer.name.toLowerCase()
+          o.customerPhone.replace(/\D/g, '') === selectedCustomer.phone.replace(/\D/g, '')
       )
     : [];
 
