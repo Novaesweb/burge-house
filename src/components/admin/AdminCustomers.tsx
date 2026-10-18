@@ -25,6 +25,11 @@ export const AdminCustomers: React.FC = () => {
       (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const inactiveCount = customers.filter(c => c.lastOrderAt && Date.now() - new Date(c.lastOrderAt).getTime() >= 30 * 86400000).length;
+  const daysWithoutOrder = (lastOrderAt?: string) => lastOrderAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(lastOrderAt).getTime()) / 86400000))
+    : null;
+
   const customerOrders = selectedCustomer
     ? orders.filter(
         (o) =>
@@ -54,6 +59,16 @@ export const AdminCustomers: React.FC = () => {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4">
+          <p className="text-xs text-neutral-400">Clientes cadastrados</p>
+          <p className="text-2xl font-black text-white">{customers.length}</p>
+        </div>
+        <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-4">
+          <p className="text-xs text-neutral-400">Sem pedidos há 30+ dias</p>
+          <p className="text-2xl font-black text-amber-400">{inactiveCount}</p>
+        </div>
+      </div>
       {/* Search Bar */}
       <div className="bg-neutral-900 p-4 rounded-2xl border border-neutral-800">
         <div className="relative max-w-md">
@@ -80,13 +95,14 @@ export const AdminCustomers: React.FC = () => {
                 <th className="px-5 py-3.5">Total de Pedidos</th>
                 <th className="px-5 py-3.5">Total Gasto</th>
                 <th className="px-5 py-3.5">Último Pedido</th>
+                <th className="px-5 py-3.5">Sem pedir há</th>
                 <th className="px-5 py-3.5 text-right">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800/60">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-neutral-500">
+                  <td colSpan={8} className="text-center py-12 text-neutral-500">
                     Nenhum cliente encontrado.
                   </td>
                 </tr>
@@ -126,6 +142,9 @@ export const AdminCustomers: React.FC = () => {
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-5 py-4 text-neutral-300 whitespace-nowrap">
+                      {daysWithoutOrder(cust.lastOrderAt) === null ? 'Sem pedidos' : `${daysWithoutOrder(cust.lastOrderAt)} dias`}
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <button
