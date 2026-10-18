@@ -1,3 +1,5 @@
+import { requireSupabase } from '../lib/supabase';
+import { isWithinOpeningHours } from '../utils/openingHours';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -28,15 +30,39 @@ export const CheckoutView: React.FC = () => {
     setCustomerView,
   } = useStore();
 
-  const [name, setName] = useState(() => localStorage.getItem('customer_saved_name') || '');
-  const [phone, setPhone] = useState(() => localStorage.getItem('customer_saved_phone') || '');
-  const [cep, setCep] = useState(() => localStorage.getItem('customer_saved_cep') || '');
+  const customerKey = (phoneNumber: string) => `delivery:customer:${siteId}:${phoneNumber.replace(/\D/g,'')}`;
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState(() => localStorage.getItem(`delivery:customer-phone:${siteId}`) || '');
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id=window.setInterval(()=>setNow(new Date()),30000);return()=>window.clearInterval(id); }, []);
+  const scheduleOpen = isWithinOpeningHours(siteSettings, now);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponFeedback, setCouponFeedback] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [cep, setCep] = useState('');
   const [cepMessage, setCepMessage] = useState('');
   const [cepLoading, setCepLoading] = useState(false);
-  const [street, setStreet] = useState(() => localStorage.getItem('customer_saved_street') || '');
-  const [number, setNumber] = useState(() => localStorage.getItem('customer_saved_number') || '');
-  const [complement, setComplement] = useState(() => localStorage.getItem('customer_saved_complement') || '');
-  const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem('customer_saved_neighborhood') || '');
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  useEffect(() => {
+    const digits=phone.replace(/\D/g,'');
+    if (digits.length < 10) return;
+    const saved=localStorage.getItem(customerKey(digits));
+    if (!saved) return;
+    try {
+      const data=JSON.parse(saved);
+      setName(data.name || '');
+      setCep(data.cep || '');
+      setStreet(data.street || '');
+      setNumber(data.number || '');
+      setComplement(data.complement || '');
+      setNeighborhood(data.neighborhood || '');
+    } catch { /* Dados locais inválidos: manter preenchimento manual. */ }
+  }, [phone, siteId]);
   const [isEditingAddress, setIsEditingAddress] = useState(() => !localStorage.getItem('customer_saved_street'));
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
@@ -71,8 +97,24 @@ export const CheckoutView: React.FC = () => {
     } finally { setCepLoading(false); }
   };
 
+  const checkCoupon = async () => {
+    setCouponLoading(true); setCouponFeedback('');
+    try {
+      const code = couponInput.trim().toUpperCase();
+      if (!code) { setCouponCode(''); setCouponDiscount(0); return; }
+      const {data,error} = await requireSupabase().rpc('delivery_quote_coupon', {
+        p_store_id: siteId, p_code: code, p_subtotal: cartSubtotal
+      });
+      if (error || !data?.valid) { setCouponCode(''); setCouponDiscount(0); setCouponFeedback('Cupom inválido, expirado ou indisponível para este pedido.'); return; }
+      setCouponCode(code); setCouponDiscount(Number(data.discount)||0);
+      setCouponFeedback('Cupom aplicado! O valor final será confirmado pelo servidor.');
+    } catch { setCouponCode(''); setCouponDiscount(0); setCouponFeedback('Não foi possível verificar o cupom.'); }
+    finally { setCouponLoading(false); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
     if (!name.trim()) {
       setErrorMsg('Por favor informe seu nome.');
       return;
@@ -94,15 +136,6 @@ export const CheckoutView: React.FC = () => {
       setIsSubmitting(true);
       setErrorMsg('');
 
-      // Save user input for future orders
-      localStorage.setItem('customer_saved_cep', cep);
-      localStorage.setItem('customer_saved_name', name.trim());
-      localStorage.setItem('customer_saved_phone', phone.trim());
-      localStorage.setItem('customer_saved_street', street.trim());
-      localStorage.setItem('customer_saved_number', number.trim());
-      localStorage.setItem('customer_saved_complement', complement.trim());
-      localStorage.setItem('customer_saved_neighborhood', neighborhood.trim());
-
       await handleCheckoutOrder({
         customerName: name,
         customerPhone: phone,
@@ -113,9 +146,12 @@ export const CheckoutView: React.FC = () => {
           neighborhood,
         },
         paymentMethod,
+        couponCode: couponCode || undefined,
         paymentChange: paymentMethod === 'cash' ? paymentChange : undefined,
         notes,
       });
+      localStorage.setItem(customerKey(phone),JSON.stringify({name:name.trim(),cep,street:street.trim(),number:number.trim(),complement:complement.trim(),neighborhood:neighborhood.trim()}));
+      localStorage.setItem(`delivery:customer-phone:${siteId}`,phone.replace(/\D/g,''));
     } catch (err: any) {
       setErrorMsg(err instanceof Error ? err.message : 'Não foi possível confirmar o pedido. Tente novamente.');
       console.error(err);
@@ -124,6 +160,7 @@ export const CheckoutView: React.FC = () => {
     }
   };
 
+  useEffect(() => { setCouponCode(''); setCouponDiscount(0); setCouponFeedback(''); }, [cartSubtotal]);
   const deliveryFee = typeof siteSettings?.deliveryFee === 'number' ? siteSettings.deliveryFee : 5.0;
 
   return (
@@ -429,7 +466,18 @@ export const CheckoutView: React.FC = () => {
             <h4 className="text-sm font-black text-neutral-300 uppercase tracking-wider mb-1">
               Resumo do Pedido
             </h4>
-            <div className="flex justify-between text-sm text-neutral-300">
+            <div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 mb-4 space-y-2">
+                <label className="text-sm font-bold text-white block">Cupom de desconto</label>
+                <div className="flex gap-2">
+                  <input value={couponInput} onChange={e=>{setCouponInput(e.target.value.toUpperCase());setCouponCode('');setCouponDiscount(0);}}
+                    placeholder="Digite seu cupom" className="min-w-0 flex-1 bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-white"/>
+                  <button type="button" onClick={()=>void checkCoupon()} disabled={couponLoading}
+                    className="bg-red-600 rounded-lg px-3 font-bold text-white">{couponLoading?'...':'Aplicar'}</button>
+                </div>
+                {couponFeedback && <p role="status" className="text-xs text-neutral-300">{couponFeedback}</p>}
+                {couponDiscount>0 && <p className="text-green-400 text-sm">Desconto: -{formatBRL(couponDiscount)}</p>}
+              </div>
+              <div className="flex justify-between text-sm text-neutral-300">
               <span>Subtotal</span>
               <span className="font-bold text-white text-base">
                 {formatBRL(cartSubtotal)}
@@ -446,15 +494,19 @@ export const CheckoutView: React.FC = () => {
                 Total do Pedido
               </span>
               <span className="text-2xl font-black text-red-500">
-                {formatBRL(cartTotal)}
+                {formatBRL(Math.max(0, cartTotal - couponDiscount))}
               </span>
             </div>
           </div>
 
+          {!scheduleOpen && <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/50 p-3 text-sm font-bold text-amber-200">
+            Loja fechada no momento. Confira o horário de funcionamento e volte mais tarde.
+          </p>}
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || !isRemoteStore(siteId) || acceptedMethods.length === 0}
+            title={!scheduleOpen ? 'Loja fechada neste horário' : undefined}
+            disabled={isSubmitting || !scheduleOpen || !isRemoteStore(siteId) || acceptedMethods.length === 0}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/80 active:scale-98 transition-all flex items-center justify-center gap-3 disabled:opacity-60 cursor-pointer"
           >
             {isSubmitting ? (

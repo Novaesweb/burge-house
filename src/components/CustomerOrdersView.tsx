@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Clock, ChevronRight, Package, Bike, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Order } from '../types';
 
 export const CustomerOrdersView: React.FC = () => {
-  const { orders, setActiveOrder, setCustomerView } = useStore();
+  const { orders, siteId, setActiveOrder, setCustomerView } = useStore();
+  const [phone, setPhone] = useState(() => localStorage.getItem(`delivery:customer-phone:${siteId}`) || '');
+  const normalized = phone.replace(/\D/g, '');
+  // Only orders already accessible through this browser's order tokens are supplied to guests.
+  // A phone number alone never unlocks a new order from the database.
+  const myOrders = normalized.length >= 10 ? orders.filter(order =>
+    order.customerPhone.replace(/\D/g, '') === normalized) : [];
 
   const handleSelectOrder = (order: Order) => {
     setActiveOrder(order);
@@ -78,13 +84,21 @@ export const CustomerOrdersView: React.FC = () => {
         </h2>
       </div>
 
-      {orders.length === 0 ? (
+      <div className="mb-5 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 space-y-2">
+        <label className="block text-sm font-bold text-white">Seu WhatsApp com DDD</label>
+        <input inputMode="tel" autoComplete="tel" value={phone} onChange={e=>{setPhone(e.target.value);}}
+          placeholder="51999999999" className="w-full rounded-xl bg-neutral-950 border border-neutral-700 p-3 text-white" />
+        <button type="button" onClick={()=>localStorage.setItem(`delivery:customer-phone:${siteId}`,normalized)}
+          className="rounded-xl bg-red-600 px-4 py-2 font-bold text-white">Continuar sem senha</button>
+        <p className="text-xs text-neutral-400">Mostramos somente os pedidos feitos e autorizados neste navegador. Para recuperar pedidos de outro aparelho será necessária uma verificação.</p>
+      </div>
+      {myOrders.length === 0 ? (
         <div className="text-center py-16 text-neutral-500">
-          Você ainda não realizou nenhum pedido.
+          Nenhum pedido disponível para este número neste aparelho.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-          {orders.map((order) => (
+          {myOrders.map((order) => (
             <div
               key={order.id}
               onClick={() => handleSelectOrder(order)}
@@ -111,10 +125,7 @@ export const CustomerOrdersView: React.FC = () => {
                       minute: '2-digit',
                     })}
                   </span>
-                  <span>•</span>
-                  <span className="font-bold text-neutral-800 dark:text-neutral-200">
-                    R$ {order.total.toFixed(2).replace('.', ',')}
-                  </span>
+
                 </div>
               </div>
 

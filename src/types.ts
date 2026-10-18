@@ -48,6 +48,8 @@ export interface SiteSettings {
   phone: string;
   address: string;
   openingHours: string;
+  autoHoursEnabled?: boolean;
+  weeklySchedule?: Record<string, { enabled: boolean; open: string; close: string }>;
   deliveryFee: number;
   isOpen: boolean;
   logoUrl: string;
@@ -167,6 +169,7 @@ export interface Order {
   subtotal: number;
   deliveryFee: number;
   discount?: number;
+  couponCode?: string;
   changeFor?: number;
   total: number;
   status: OrderStatus;
