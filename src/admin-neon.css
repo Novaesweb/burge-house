@@ -140,3 +140,31 @@
  .connect-card{grid-column:2;grid-row:1}
 }
 @media(max-width:999px){.connect-page{display:grid;place-items:center}.connect-card{margin-inline:auto}}
+
+/* Each order has its own stable bright identity color, independent of status. */
+.orders-workbench .delivery-order-card{
+  border:2px solid var(--order-card-color,#ff202e)!important;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--order-card-color,#ff202e) 24%,#1b1014),#140b0e 74%)!important;
+  box-shadow:0 8px 28px #000b,0 0 17px color-mix(in srgb,var(--order-card-color,#ff202e) 36%,transparent)!important;
+}
+.orders-workbench .delivery-order-card:hover{
+  box-shadow:0 12px 34px #000b,0 0 27px color-mix(in srgb,var(--order-card-color,#ff202e) 52%,transparent)!important;
+}
+.orders-workbench .delivery-order-card .order-card-accent{
+  height:6px;background:var(--order-card-color,#ff202e)!important;
+  box-shadow:0 0 20px var(--order-card-color,#ff202e)!important;opacity:1;
+}
+.orders-workbench .delivery-order-card .order-number{color:var(--order-card-color,#fff)!important;text-shadow:0 0 14px color-mix(in srgb,var(--order-card-color,#fff) 32%,transparent)}
+.orders-workbench .delivery-order-card .order-quantity{background:color-mix(in srgb,var(--order-card-color,#ff202e) 28%,#211419);color:#fff}
+.orders-workbench .delivery-order-card .order-items{border-color:color-mix(in srgb,var(--order-card-color,#ff202e) 40%,#23131a)}
+/* Visible food artwork behind the owner dashboard and login. */
+.admin-shell::before{
+  background:linear-gradient(90deg,#0b0508de 0%,#1605099c 60%,#140407a8 100%),url('./assets/brand/burger-house-background.png') center/cover no-repeat!important;
+  opacity:.85!important;
+}
+.admin-content{background:transparent!important}
+.connect-page::before{
+  background:linear-gradient(90deg,#1205088c,#130407a0),url('./assets/brand/burger-house-background.png') center/cover no-repeat!important;
+  opacity:1!important;
+}
+@media(prefers-reduced-motion:reduce){.orders-workbench .delivery-order-card{transition:none}}
