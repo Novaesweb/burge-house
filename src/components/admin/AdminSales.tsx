@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AdminFinanceExtras } from './AdminFinanceExtras';
 import {
   DollarSign,
   TrendingUp,
@@ -730,6 +731,7 @@ export const AdminSales: React.FC = () => {
           </div>
         </div>
       )}
+      <AdminFinanceExtras />
     </div>
   );
 };
