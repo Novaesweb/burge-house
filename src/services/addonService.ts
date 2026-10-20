@@ -1,5 +1,17 @@
 import { requireSupabase } from '../lib/supabase';
 
+/** Modules that have a real interface already wired in this delivery. */
+export const installedAddonModules = [
+  'novaes-whatsapp-notify',
+  'novaes-print-connect',
+  'novaes-promo',
+  'novaes-finance',
+  'novaes-equipe',
+  'novaes-insights',
+  'novaes-marketing',
+  'novaes-multiusuario',
+] as const;
+
 export type AddonDevelopmentStatus = 'planned' | 'ready' | 'unavailable' | string;
 export type AddonRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | string;
 export type AddonSubscriptionStatus = 'active' | 'suspended' | 'disabled' | string;
@@ -122,4 +134,24 @@ export function isAddonTechnicallyAvailable(
   return addon.development_status === 'ready'
     && subscription?.status === 'active'
     && installation?.technical_status === 'available';
+}
+
+/**
+ * Declares modules contained in this deployed frontend to the documented
+ * central endpoint. It neither approves nor activates a commercial addon.
+ */
+export async function checkInInstalledAddons(nxId: string): Promise<void> {
+  if (!nxId.trim()) throw new Error('ID NX da loja não informado.');
+  const { client } = await requireAuthenticatedUser();
+  const { data, error } = await client.functions.invoke('novaesweb-addon-checkin', {
+    body: {
+      nx_id: nxId,
+      modules: installedAddonModules.map(code => ({
+        code,
+        installed_version: 'burger-house-2026.10',
+        technical_status: 'available',
+      })),
+    },
+  });
+  if (error || data?.error) throw new Error('Não foi possível registrar a disponibilidade dos adicionais.');
 }

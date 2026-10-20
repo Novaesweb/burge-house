@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleDollarSign, Clock3, Puzzle, RefreshCw, Send, ShieldAlert, Wrench } from 'lucide-react';
 import { useConnect } from '../../context/ConnectContext';
+import { useAddonEntitlements } from '../../context/AddonEntitlementsContext';
 import {
   type CatalogAddon,
   type StoreAddonCatalog,
@@ -32,6 +33,7 @@ const compatibilityLabel = (types: string[] | null) => {
 
 export function AdminAddons() {
   const connection = useConnect();
+  const { activeCodes } = useAddonEntitlements();
   const [data, setData] = useState<StoreAddonCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,6 +60,7 @@ export function AdminAddons() {
   }, [canManage, store]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!loading) void load(true); }, [activeCodes]);
 
   const newestRequestByAddon = useMemo(() => {
     const result = new Map<string, StoreAddonCatalog['requests'][number]>();
