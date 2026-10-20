@@ -2,8 +2,6 @@ import { useConnect } from '../../context/ConnectContext';
 import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, UtensilsCrossed, PanelLeftClose, PanelLeftOpen, Megaphone, UserCog, Puzzle } from 'lucide-react';
 import { useStore, type AdminView } from '../../context/StoreContext';
-import { useAddonEntitlements } from '../../context/AddonEntitlementsContext';
-import { adminViewEntitlements } from '../../addons/registry';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
 import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
 import './orders.css';
@@ -27,7 +25,6 @@ const navigation = [
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { adminView, setAdminView, siteSettings, storeAdmin, updateSettingsAction, orders, setAppMode } = useStore();
   const connection = useConnect();
-  const entitlements = useAddonEntitlements();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('admin_sidebar_collapsed') === 'true'; } catch { return false; }
@@ -57,11 +54,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
     <aside id="admin-sidebar" className={`admin-sidebar ${menuOpen ? 'is-open' : ''}`} aria-hidden={sidebarHidden} inert={sidebarHidden ? true : undefined}>
       <a href="/" className="admin-brand"><span className="brand-symbol overflow-hidden"><img src={burgerHouseLogo} alt="" className="h-full w-full object-cover object-top scale-125" /></span><span><strong>{siteSettings.name}</strong><small>GESTÃO DA LOJA</small></span></a>
       <div className="sidebar-section-label">PRINCIPAL</div>
-      <nav aria-label="Menu administrativo">{navigation.filter(item => {
-        if (item.id === 'addons') return connection.store?.role === 'owner' || connection.store?.role === 'admin';
-        const required = adminViewEntitlements[item.id];
-        return !required || entitlements.hasAny(required);
-      }).map(({id,label,icon: Icon},index) => <React.Fragment key={id}>
+      <nav aria-label="Menu administrativo">{navigation.filter(item => item.id !== 'addons' || connection.store?.role === 'owner' || connection.store?.role === 'admin').map(({id,label,icon: Icon},index) => <React.Fragment key={id}>
         {index === 5 && <div className="sidebar-section-label">GERENCIAMENTO</div>}
         <button className={`admin-nav-item ${adminView === id ? 'active' : ''}`} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span>{id === 'orders' && pending > 0 && <b>{pending}</b>}</button>
       </React.Fragment>)}</nav>

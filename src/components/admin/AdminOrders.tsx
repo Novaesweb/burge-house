@@ -8,13 +8,9 @@ import { OrderCard, OrderStatusBadge } from './OrderCard';
 import { isOrderSoundMuted, playUrgentOrderSound, playSuccessSound } from '../../utils/audioAlert';
 import { formatBRL } from '../../utils/formatters';
 import { ORDER_STAGES, nextOrderAction, normalizeOrderStatus, orderCounts, ordersForStore, selectOrders, whatsappNumber } from '../../utils/adminOrders';
-import { useAddonEntitlements } from '../../context/AddonEntitlementsContext';
 
 export const AdminOrders: React.FC = () => {
   const {orders:allOrders,siteId,changeOrderStatus,toggleOrderPaymentAction,siteSettings,selectedAdminOrder,setSelectedAdminOrder}=useStore();
-  const { hasAny } = useAddonEntitlements();
-  const printEnabled = hasAny(['novaes-print-connect']);
-  const whatsappEnabled = hasAny(['novaes-whatsapp-notify']);
   const orders=useMemo(()=>ordersForStore(allOrders,siteId),[allOrders,siteId]);
   const [viewMode,setViewMode]=useState<'cards'|'list'>(()=>localStorage.getItem('admin_orders_view')==='list'?'list':'cards');
   const [selectedStatusFilter,setSelectedStatusFilter]=useState('todos');
@@ -64,7 +60,7 @@ export const AdminOrders: React.FC = () => {
   const handleStatusChange=(orderId:string,status:OrderStatus)=>perform(orderId,async()=>{
     const target=orders.find(order=>order.id===orderId);
     await changeOrderStatus(orderId,status);
-    if(status==='preparando'&&target?.status==='recebido'&&autoPrintOnAccept&&printEnabled)setReceiptOrder({...target,status});
+    if(status==='preparando'&&target?.status==='recebido'&&autoPrintOnAccept)setReceiptOrder({...target,status});
   });
   const handleTogglePayment=(orderId:string,currentPaid:boolean)=>perform(orderId,()=>toggleOrderPaymentAction(orderId,!currentPaid));
   const confirmDeleteOrder=async(event:React.FormEvent)=>{
@@ -81,7 +77,6 @@ export const AdminOrders: React.FC = () => {
     finally{setDeleting(false);}
   };
   const openWhatsAppCustomer=(order:Order)=>{
-    if (!whatsappEnabled) return;
     const number=whatsappNumber(order.customerPhone);if(!number)return;
     const messages:Record<string,string>={recebido:'foi recebido',preparando:'está em preparo',itens_separados:'está separado',esperando_motoboy:'está aguardando motoboy',saiu_para_entrega:'está a caminho',entregue:'foi entregue',cancelado:'foi cancelado'};
     let message=`Olá ${order.customerName}! Seu pedido #${order.orderNumber} no ${siteSettings.name} ${messages[normalizeStatus(order.status)]||''}.`;
@@ -90,12 +85,12 @@ export const AdminOrders: React.FC = () => {
   };
   const changeView=(view:'cards'|'list')=>{setViewMode(view);localStorage.setItem('admin_orders_view',view);};
   return <div className="orders-workbench">
-    <header className="orders-page-heading"><div><span className="workspace-eyebrow">OPERAÇÃO DA LOJA</span><h1>Pedidos <span className="live-indicator"><i/>Atualização automática</span></h1><p>Cada pedido no seu lugar. Cada próxima ação à vista.</p></div><div className="orders-tools">{printEnabled&&<button className={`order-tool ${autoPrintOnAccept?'is-enabled':''}`} aria-pressed={autoPrintOnAccept} onClick={()=>{const next=!autoPrintOnAccept;setAutoPrintOnAccept(next);localStorage.setItem(`auto_print_on_accept:${siteId}`,String(next));}}><Printer size={16}/>Comanda automática <span>{autoPrintOnAccept?'Ativa':'Inativa'}</span></button>}<button className="order-tool" onClick={()=>playUrgentOrderSound()}><Volume2 size={16}/>Testar som</button></div></header>
+    <header className="orders-page-heading"><div><span className="workspace-eyebrow">OPERAÇÃO DA LOJA</span><h1>Pedidos <span className="live-indicator"><i/>Atualização automática</span></h1><p>Cada pedido no seu lugar. Cada próxima ação à vista.</p></div><div className="orders-tools"><button className={`order-tool ${autoPrintOnAccept?'is-enabled':''}`} aria-pressed={autoPrintOnAccept} onClick={()=>{const next=!autoPrintOnAccept;setAutoPrintOnAccept(next);localStorage.setItem(`auto_print_on_accept:${siteId}`,String(next));}}><Printer size={16}/>Comanda automática <span>{autoPrintOnAccept?'Ativa':'Inativa'}</span></button><button className="order-tool" onClick={()=>playUrgentOrderSound()}><Volume2 size={16}/>Testar som</button></div></header>
     <section className="orders-overview" aria-label="Resumo dos pedidos"><div className="overview-primary"><span className="overview-icon"><BellRing size={22}/></span><div><span>Novos pedidos</span><strong>{counts.recebido}</strong><small>Aguardando iniciar preparo</small></div></div><div><span>Em atendimento</span><strong>{activeCount}</strong><small>Pedidos ainda em operação</small></div><div><span>Esperando motoboy</span><strong>{counts.esperando_motoboy}</strong><small>Prontos para sair</small></div><div><span>Em rota</span><strong>{counts.saiu_para_entrega}</strong><small>A caminho do cliente</small></div></section>
     {nextAttention&&<div className="order-attention"><span><span className="attention-dot"/><strong>Próximo atendimento</strong> <span>#{nextAttention.orderNumber} · {nextAttention.customerName}</span></span><button onClick={()=>{setSelectedStatusFilter(normalizeStatus(nextAttention.status));setSearchQuery('');setSelectedOrder(nextAttention);}}>Abrir pedido<ArrowRight size={15}/></button></div>}
     {error&&<div className="order-error" role="alert">{error}<button aria-label="Fechar erro" onClick={()=>setError('')}><X size={16}/></button></div>}
     <section className="orders-control-panel" aria-label="Filtros de pedidos"><div className="order-status-filters" role="group" aria-label="Filtrar por status"><button className={`status-filter tone-gray ${selectedStatusFilter==='todos'?'is-selected':''}`} aria-pressed={selectedStatusFilter==='todos'} onClick={()=>setSelectedStatusFilter('todos')}><span>Todos</span><b>{orders.length}</b></button>{ORDER_STAGES.map(stage=><button key={stage.id} className={`status-filter tone-${stage.tone} ${selectedStatusFilter===stage.id?'is-selected':''}`} aria-pressed={selectedStatusFilter===stage.id} onClick={()=>setSelectedStatusFilter(stage.id)}><span><i/>{stage.label}</span><b>{counts[stage.id]}</b></button>)}</div><div className="orders-search-row"><label className="order-search"><Search size={18}/><span className="sr-only">Buscar pedido, cliente ou telefone</span><input value={searchQuery} onChange={event=>setSearchQuery(event.target.value)} placeholder="Buscar pedido, cliente ou telefone"/>{searchQuery&&<button aria-label="Limpar busca" onClick={()=>setSearchQuery('')}><X size={16}/></button>}</label><span className="order-results" aria-live="polite">{filteredOrders.length} {filteredOrders.length===1?'pedido':'pedidos'}</span><div className="order-view-toggle" role="group" aria-label="Visualização"><button aria-label="Visualização em cartões" aria-pressed={viewMode==='cards'} className={viewMode==='cards'?'is-selected':''} onClick={()=>changeView('cards')}><LayoutGrid size={17}/><span>Cartões</span></button><button aria-label="Visualização em lista" aria-pressed={viewMode==='list'} className={viewMode==='list'?'is-selected':''} onClick={()=>changeView('list')}><List size={18}/><span>Lista</span></button></div></div></section>
-    {filteredOrders.length>0?<div className={`delivery-orders-grid ${viewMode==='list'?'is-list':''}`} aria-label="Pedidos da loja">{filteredOrders.map(order=><OrderCard key={order.id} order={order} now={currentTime} list={viewMode==='list'} busy={busyIds.includes(order.id)} showPrint={printEnabled} showWhatsApp={whatsappEnabled} onAdvance={()=>{const next=nextOrderAction(order.status);if(next)void handleStatusChange(order.id,next.status);}} onPayment={()=>void handleTogglePayment(order.id,!!order.isPaid)} onDetails={()=>setSelectedOrder(order)} onPrint={()=>{if(printEnabled)setReceiptOrder(order);}} onWhatsApp={()=>openWhatsAppCustomer(order)}/>)}</div>:<div className="orders-empty"><Package size={34}/><h2>Nenhum pedido por aqui</h2><p>{searchQuery||selectedStatusFilter!=='todos'?'Tente outro status ou ajuste a busca.':'Os pedidos recebidos aparecerão aqui automaticamente.'}</p>{(searchQuery||selectedStatusFilter!=='todos')&&<button onClick={()=>{setSearchQuery('');setSelectedStatusFilter('todos');}}>Ver todos os pedidos</button>}</div>}
+    {filteredOrders.length>0?<div className={`delivery-orders-grid ${viewMode==='list'?'is-list':''}`} aria-label="Pedidos da loja">{filteredOrders.map(order=><OrderCard key={order.id} order={order} now={currentTime} list={viewMode==='list'} busy={busyIds.includes(order.id)} onAdvance={()=>{const next=nextOrderAction(order.status);if(next)void handleStatusChange(order.id,next.status);}} onPayment={()=>void handleTogglePayment(order.id,!!order.isPaid)} onDetails={()=>setSelectedOrder(order)} onPrint={()=>setReceiptOrder(order)} onWhatsApp={()=>openWhatsAppCustomer(order)}/>)}</div>:<div className="orders-empty"><Package size={34}/><h2>Nenhum pedido por aqui</h2><p>{searchQuery||selectedStatusFilter!=='todos'?'Tente outro status ou ajuste a busca.':'Os pedidos recebidos aparecerão aqui automaticamente.'}</p>{(searchQuery||selectedStatusFilter!=='todos')&&<button onClick={()=>{setSearchQuery('');setSelectedStatusFilter('todos');}}>Ver todos os pedidos</button>}</div>}
       {deleteOrder && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4" role="presentation"><form onSubmit={e=>void confirmDeleteOrder(e)} role="dialog" aria-modal="true" aria-label="Confirmar exclusão de pedido" className="w-full max-w-md rounded-2xl border border-red-700 bg-neutral-900 p-6 space-y-4 text-white"><h3 className="text-xl font-black text-red-400">Excluir pedido #{deleteOrder.orderNumber}?</h3><p className="text-sm text-neutral-300">Esta ação é permanente e remove o pedido do painel e do banco de dados. Somente o proprietário pode confirmar usando a senha da própria conta.</p><label className="block text-sm font-bold" htmlFor="delete-order-password">Senha do proprietário</label><input id="delete-order-password" type="password" autoComplete="current-password" required value={deletePassword} onChange={e=>setDeletePassword(e.target.value)} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 p-3" placeholder="Digite sua senha" />{deleteError&&<p role="alert" className="text-red-400 text-sm">{deleteError}</p>}<div className="flex gap-3"><button type="button" disabled={deleting} onClick={()=>{setDeleteOrder(null);setDeletePassword('');setDeleteError('');}} className="flex-1 rounded-xl bg-neutral-700 p-3 font-bold">Cancelar</button><button type="submit" disabled={deleting||!deletePassword} className="flex-1 rounded-xl bg-red-600 p-3 font-bold disabled:opacity-50">{deleting?'Excluindo...':'Excluir pedido'}</button></div></form></div>}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
@@ -123,19 +118,19 @@ export const AdminOrders: React.FC = () => {
                   title="Excluir pedido com senha"
                   aria-label="Excluir pedido com senha"
                 ><Trash2 className="w-4 h-4" /></button>
-                {printEnabled&&<button
+                <button
                   onClick={() => setReceiptOrder(selectedOrder)}
                   className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white transition-colors"
                   title="Imprimir Comanda"
                 >
                   <Printer className="w-4 h-4" />
-                </button>}
-                {whatsappEnabled&&<button
+                </button>
+                <button
                   aria-label="Fechar detalhes" onClick={() => setSelectedOrder(null)}
                   className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors"
                 >
                   <X className="w-4 h-4" />
-                </button>}
+                </button>
               </div>
             </div>
 

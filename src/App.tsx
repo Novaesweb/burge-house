@@ -38,8 +38,6 @@ import { AdminSettings } from './components/admin/AdminSettings';
 import { AdminSupport } from './components/admin/AdminSupport';
 import { AdminExtras } from './components/admin/AdminExtras';
 import { AdminAddons } from './components/admin/AdminAddons';
-import { AddonEntitlementsProvider } from './context/AddonEntitlementsContext';
-import { AddonAccessGate } from './components/admin/AddonAccessGate';
 
 interface DeliveryAppContentProps {
   isAdmDonoRoute: boolean;
@@ -88,22 +86,22 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
     if (connection.recoveryMode) return <PasswordSetupGate />;
     if (connection.loading || !connection.session || !connection.store) return <ConnectGate />;
     return (
-      <AddonEntitlementsProvider><AdminLayout>
+      <AdminLayout>
         {adminView === 'dashboard' && <AdminDashboard />}
         {adminView === 'orders' && <AdminOrders />}
         {adminView === 'products' && <AdminProducts />}
         {adminView === 'categories' && <AdminCategories />}
         {adminView === 'customers' && <AdminCustomers />}
-        {adminView === 'marketing' && <AddonAccessGate codes={['novaes-marketing']}><AdminMarketing /></AddonAccessGate>}
-        {adminView === 'team' && <AddonAccessGate codes={['novaes-equipe', 'novaes-multiusuario']}><AdminTeam /></AddonAccessGate>}
+        {adminView === 'marketing' && <AdminMarketing />}
+        {adminView === 'team' && <AdminTeam />}
         {adminView === 'sales' && <AdminSales />}
-        {adminView === 'reports' && <AddonAccessGate codes={['novaes-insights']}><AdminReports /></AddonAccessGate>}
+        {adminView === 'reports' && <AdminReports />}
         {adminView === 'reviews' && <AdminReviews />}
         {adminView === 'addons' && <AdminAddons />}
         {adminView === 'settings' && <AdminSettings />}
         {adminView === 'support' && <AdminSupport />}
         {adminView === 'extras' && <AdminExtras />}
-      </AdminLayout></AddonEntitlementsProvider>
+      </AdminLayout>
     );
   }
 

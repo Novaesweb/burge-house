@@ -2,14 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useConnect } from '../../context/ConnectContext';
 import { requireSupabase } from '../../lib/supabase';
-import { useAddonEntitlements } from '../../context/AddonEntitlementsContext';
 
 type Cost = { store_id:string; product_id:string; cost:number };
 type Recurring = { id:string; store_id:string; description:string; amount:number; category:string; due_day:number; active:boolean };
 type Closing = { id:string; period_start:string; period_end:string; expected_amount:number; actual_amount:number|null; closed_at:string };
 const money = (n:number) => n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 export const AdminFinanceExtras: React.FC = () => {
-  const { hasAny } = useAddonEntitlements();
   const { siteId, products, orders, manualPayments } = useStore();
   const { store } = useConnect();
   const [costs,setCosts] = useState<Cost[]>([]);
@@ -69,7 +67,6 @@ export const AdminFinanceExtras: React.FC = () => {
     if(actualValue!==null&&(!Number.isFinite(actualValue)||actualValue<0)){setError('Valor conferido inválido.');return;}
     void execute(async()=>{const result=await requireSupabase().from('delivery_cash_closings').insert({store_id:siteId,period_start:periodStart,period_end:periodEnd,expected_amount:estimated,actual_amount:actualValue,notes:notes.trim()});if(!result.error){setActual('');setNotes('');}return result;});
   };
-  if(!hasAny(['novaes-finance']))return null;
   if(!allowed)return <p className="text-amber-400">Somente proprietário ou administrador pode consultar este financeiro.</p>;
   return <section className="space-y-5 text-white">
     <h2 className="text-xl font-black">Controle financeiro avançado</h2>

@@ -1,21 +1,8 @@
 import { requireSupabase } from '../lib/supabase';
 
-/** Modules that have a real interface already wired in this delivery. */
-export const installedAddonModules = [
-  'novaes-whatsapp-notify',
-  'novaes-print-connect',
-  'novaes-promo',
-  'novaes-finance',
-  'novaes-equipe',
-  'novaes-insights',
-  'novaes-marketing',
-  'novaes-multiusuario',
-] as const;
-
 export type AddonDevelopmentStatus = 'planned' | 'ready' | 'unavailable' | string;
 export type AddonRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | string;
 export type AddonSubscriptionStatus = 'active' | 'suspended' | 'disabled' | string;
-export type AddonTechnicalStatus = 'available' | 'degraded' | 'unavailable' | string;
 
 export interface CatalogAddon {
   id: string;
@@ -44,16 +31,10 @@ export interface StoreAddon {
   status: AddonSubscriptionStatus;
 }
 
-export interface AddonInstallation {
-  addon_id: string;
-  technical_status: AddonTechnicalStatus;
-}
-
 export interface StoreAddonCatalog {
   catalog: CatalogAddon[];
   requests: AddonRequest[];
   subscriptions: StoreAddon[];
-  installations: AddonInstallation[];
 }
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -70,14 +51,15 @@ async function requireAuthenticatedUser() {
 }
 
 /**
- * Reads only the current store's commercial catalog and its own entitlement
- * state. RLS remains the authorization boundary for every query.
+ * Reads only the current store's commercial catalog and request history.
+ * The subscription data is shown as a commercial status only; it never
+ * enables a feature in this delivery. RLS remains the authorization boundary.
  */
 export async function getStoreAddonCatalog(storeId: string): Promise<StoreAddonCatalog> {
   assertOfficialStoreId(storeId);
   const { client } = await requireAuthenticatedUser();
 
-  const [catalogResult, requestResult, subscriptionResult, installationResult] = await Promise.all([
+  const [catalogResult, requestResult, subscriptionResult] = await Promise.all([
     client
       .from('addon_catalog')
       .select('id,code,name,summary,description,icon,category,billing_type,price,setup_fee,development_status,compatible_site_types')
@@ -93,20 +75,15 @@ export async function getStoreAddonCatalog(storeId: string): Promise<StoreAddonC
       .from('store_addons')
       .select('addon_id,status')
       .eq('store_id', storeId),
-    client
-      .from('store_addon_installations')
-      .select('addon_id,technical_status')
-      .eq('store_id', storeId),
   ]);
 
-  const failure = [catalogResult, requestResult, subscriptionResult, installationResult].find(result => result.error)?.error;
+  const failure = [catalogResult, requestResult, subscriptionResult].find(result => result.error)?.error;
   if (failure) throw new Error('Não foi possível carregar os adicionais liberados pelo Master.');
 
   return {
     catalog: (catalogResult.data || []) as CatalogAddon[],
     requests: (requestResult.data || []) as AddonRequest[],
     subscriptions: (subscriptionResult.data || []) as StoreAddon[],
-    installations: (installationResult.data || []) as AddonInstallation[],
   };
 }
 
@@ -124,34 +101,4 @@ export async function requestStoreAddon(storeId: string, addonId: string): Promi
     requested_by: user.id,
   });
   if (error) throw new Error('Não foi possível enviar a solicitação. Confira seu vínculo com a loja e tente novamente.');
-}
-
-export function isAddonTechnicallyAvailable(
-  addon: CatalogAddon,
-  subscription?: StoreAddon,
-  installation?: AddonInstallation,
-): boolean {
-  return addon.development_status === 'ready'
-    && subscription?.status === 'active'
-    && installation?.technical_status === 'available';
-}
-
-/**
- * Declares modules contained in this deployed frontend to the documented
- * central endpoint. It neither approves nor activates a commercial addon.
- */
-export async function checkInInstalledAddons(nxId: string): Promise<void> {
-  if (!nxId.trim()) throw new Error('ID NX da loja não informado.');
-  const { client } = await requireAuthenticatedUser();
-  const { data, error } = await client.functions.invoke('novaesweb-addon-checkin', {
-    body: {
-      nx_id: nxId,
-      modules: installedAddonModules.map(code => ({
-        code,
-        installed_version: 'burger-house-2026.10',
-        technical_status: 'available',
-      })),
-    },
-  });
-  if (error || data?.error) throw new Error('Não foi possível registrar a disponibilidade dos adicionais.');
 }
