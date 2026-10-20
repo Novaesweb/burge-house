@@ -74,6 +74,7 @@ export type AdminView =
   | 'sales'
   | 'reports'
   | 'reviews'
+  | 'addons'
   | 'settings'
   | 'support'
   | 'extras';

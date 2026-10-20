@@ -37,6 +37,7 @@ import { AdminReports } from './components/admin/AdminReports';
 import { AdminSettings } from './components/admin/AdminSettings';
 import { AdminSupport } from './components/admin/AdminSupport';
 import { AdminExtras } from './components/admin/AdminExtras';
+import { AdminAddons } from './components/admin/AdminAddons';
 
 interface DeliveryAppContentProps {
   isAdmDonoRoute: boolean;
@@ -95,6 +96,8 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
         {adminView === 'team' && <AdminTeam />}
         {adminView === 'sales' && <AdminSales />}
         {adminView === 'reports' && <AdminReports />}
+        {adminView === 'reviews' && <AdminReviews />}
+        {adminView === 'addons' && <AdminAddons />}
         {adminView === 'reviews' && <AdminReviews />}
         {adminView === 'settings' && <AdminSettings />}
         {adminView === 'support' && <AdminSupport />}
