@@ -17,6 +17,12 @@ export interface CatalogAddon {
   setup_fee: number | null;
   development_status: AddonDevelopmentStatus;
   compatible_site_types: string[] | null;
+  activation_location: string | null;
+  suggested_route: string | null;
+  integration_requirements: string | null;
+  activation_rules: string | null;
+  disable_rules: string | null;
+  created_at: string;
 }
 
 export interface AddonRequest {
@@ -55,16 +61,17 @@ async function requireAuthenticatedUser() {
  * The subscription data is shown as a commercial status only; it never
  * enables a feature in this delivery. RLS remains the authorization boundary.
  */
-export async function getStoreAddonCatalog(storeId: string): Promise<StoreAddonCatalog> {
+export async function getStoreAddonCatalog(storeId: string, siteType?: string | null): Promise<StoreAddonCatalog> {
   assertOfficialStoreId(storeId);
   const { client } = await requireAuthenticatedUser();
 
   const [catalogResult, requestResult, subscriptionResult] = await Promise.all([
     client
       .from('addon_catalog')
-      .select('id,code,name,summary,description,icon,category,billing_type,price,setup_fee,development_status,compatible_site_types')
+      .select('id,code,name,summary,description,icon,category,billing_type,price,setup_fee,development_status,compatible_site_types,activation_location,suggested_route,integration_requirements,activation_rules,disable_rules,created_at')
       .eq('is_visible', true)
       .eq('is_active', true)
+      .neq('development_status', 'unavailable')
       .order('sort_order', { ascending: true }),
     client
       .from('addon_requests')
@@ -80,8 +87,13 @@ export async function getStoreAddonCatalog(storeId: string): Promise<StoreAddonC
   const failure = [catalogResult, requestResult, subscriptionResult].find(result => result.error)?.error;
   if (failure) throw new Error('Não foi possível carregar os adicionais liberados pelo Master.');
 
+  const catalog = (catalogResult.data || []) as CatalogAddon[];
+  const compatibleCatalog = siteType
+    ? catalog.filter(addon => !addon.compatible_site_types?.length || addon.compatible_site_types.includes('*') || addon.compatible_site_types.includes(siteType))
+    : catalog;
+
   return {
-    catalog: (catalogResult.data || []) as CatalogAddon[],
+    catalog: compatibleCatalog,
     requests: (requestResult.data || []) as AddonRequest[],
     subscriptions: (subscriptionResult.data || []) as StoreAddon[],
   };

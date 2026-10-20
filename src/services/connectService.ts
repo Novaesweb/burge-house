@@ -8,7 +8,7 @@ export interface RegistrationStatus {
   site_name?: string;
   review_note?: string;
 }
-export interface OfficialStore { id: string; nx_id: string; name: string; status: string; role: 'owner' | 'admin' | 'staff' | 'viewer'; }
+export interface OfficialStore { id: string; nx_id: string; name: string; status: string; site_type: string | null; role: 'owner' | 'admin' | 'staff' | 'viewer'; }
 export interface RegistrationInput { site_name: string; site_domain?: string; owner_name?: string; plan_code?: string; }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -74,7 +74,7 @@ export async function validateOfficialStore(storeId: string, nxId: string): Prom
   const client = requireSupabase();
   const { data: { user }, error: authError } = await client.auth.getUser();
   if (authError || !user) throw new Error('Sua sessão expirou. Entre novamente.');
-  const { data: store, error: storeError } = await client.from('managed_sites').select('id,nx_id,name,status').eq('id', storeId).eq('nx_id', nxId).maybeSingle();
+  const { data: store, error: storeError } = await client.from('managed_sites').select('id,nx_id,name,status,site_type').eq('id', storeId).eq('nx_id', nxId).maybeSingle();
   if (storeError) throw new Error('Não foi possível validar a loja oficial.');
   if (!store) throw new Error('Loja não encontrada ou sem acesso autorizado.');
   const { data: member, error: memberError } = await client.from('store_members').select('role').eq('store_id', store.id).eq('user_id', user.id).eq('is_active', true).maybeSingle();
