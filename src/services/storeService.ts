@@ -21,7 +21,7 @@ export async function saveProduct(siteId:string,data:Product){return isRemoteSto
 export async function deleteProduct(siteId:string,id:string){return isRemoteStore(siteId)?remote.deleteRemoteProduct(siteId,id):local.deleteProduct(siteId,id);}
 export function subscribeOrders(siteId:string,onData:(value:Order[])=>void){return isRemoteStore(siteId)?remote.subscribeRemoteOrders(siteId,onData):local.subscribeOrders(siteId,onData);}
 export async function createOrder(siteId:string,data:Omit<Order,'id'|'orderNumber'|'createdAt'|'updatedAt'>){return isRemoteStore(siteId)?remote.createRemoteOrder(siteId,data):local.createOrder(siteId,data);}
-export async function updateOrderStatus(siteId:string,id:string,status:OrderStatus){return isRemoteStore(siteId)?remote.updateRemoteOrder(siteId,id,{status}):local.updateOrderStatus(siteId,id,status);}
+export async function updateOrderStatus(siteId:string,id:string,status:OrderStatus,expectedStatus?:string){return isRemoteStore(siteId)?remote.updateRemoteOrder(siteId,id,{status},expectedStatus):local.updateOrderStatus(siteId,id,status,expectedStatus);}
 export async function updateOrderPaymentStatus(siteId:string,id:string,isPaid:boolean){return isRemoteStore(siteId)?remote.updateRemoteOrder(siteId,id,{is_paid:isPaid}):local.updateOrderPaymentStatus(siteId,id,isPaid);}
 export async function submitOrderReview(siteId:string,id:string,review:OrderReview){return isRemoteStore(siteId)?remote.reviewRemoteOrder(siteId,id,review):local.submitOrderReview(siteId,id,review);}
 export function subscribeCustomers(siteId:string,onData:(value:Customer[])=>void){return isRemoteStore(siteId)?remote.subscribeRemoteCustomers(siteId,onData):local.subscribeCustomers(siteId,onData);}

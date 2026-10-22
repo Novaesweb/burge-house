@@ -1,5 +1,5 @@
 // Web Audio API Sound Generator for Real-Time Delivery Notifications
-// Completely self-contained, no external MP3 dependencies, 100% reliable across browsers.
+// Self-contained: playback still requires the browser's audio permission.
 
 let audioCtx: AudioContext | null = null;
 let soundEnabled = true;
@@ -12,8 +12,16 @@ if (typeof window !== 'undefined') {
   } catch (e) {}
 }
 
-let alertLoopTimer: any = null;
+let alertLoopTimer: ReturnType<typeof setInterval> | null = null;
 let isLoopRunning = false;
+let releaseLoopOwnership: (() => void) | null = null;
+let ownershipAbort: AbortController | null = null;
+let loopGeneration = 0;
+let currentChimeUntil = 0;
+const activeChimeNodes = new Set<OscillatorNode>();
+const muteUntilKey = 'admin_orders_sound_muted_until';
+let muteUntilState = 0;
+export const ORDER_SOUND_EVENT = 'order-sound-state';
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -25,30 +33,22 @@ function getAudioContext(): AudioContext | null {
       audioCtx = new AudioContextClass();
     }
   }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
   return audioCtx;
 }
 
 export function getAudioContextState(): AudioContextState | 'unsupported' {
   if (typeof window === 'undefined') return 'unsupported';
-  const ctx = getAudioContext();
-  if (!ctx) return 'unsupported';
-  return ctx.state;
+  if (audioCtx) return audioCtx.state;
+  return window.AudioContext || (window as unknown as { webkitAudioContext?: unknown }).webkitAudioContext ? 'suspended' : 'unsupported';
 }
 
 export async function unlockAudio(): Promise<boolean> {
-  const ctx = getAudioContext();
-  if (!ctx) return false;
-  if (ctx.state === 'suspended') {
-    try {
-      await ctx.resume();
-    } catch {
-      return false;
-    }
-  }
-  return ctx.state === 'running';
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return false;
+    if (ctx.state === 'suspended') await ctx.resume();
+    return ctx.state === 'running';
+  } catch { return false; }
 }
 
 export function enableAudio() {
@@ -67,15 +67,57 @@ export function isAudioEnabled(): boolean {
 
 export function setOrderSoundMuted(muted: boolean): void {
   isMutedState = muted;
+  muteUntilState = 0;
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('admin_orders_sound_muted', muted ? 'true' : 'false');
+      localStorage.removeItem(muteUntilKey);
     } catch (e) {}
   }
+  if (muted) stopCurrentOrderChime();
+  notifySoundState();
 }
 
 export function isOrderSoundMuted(): boolean {
-  return isMutedState;
+  try {
+    if (typeof window !== 'undefined') isMutedState = localStorage.getItem('admin_orders_sound_muted') === 'true';
+  } catch {}
+  return isMutedState || getOrderSoundMuteUntil() > Date.now();
+}
+
+export function getOrderSoundMuteUntil(): number {
+  try {
+    if (typeof window !== 'undefined') muteUntilState = Number(localStorage.getItem(muteUntilKey)) || 0;
+  } catch {}
+  return muteUntilState;
+}
+
+export function muteOrderSoundTemporarily(durationMs = 5 * 60 * 1000): void {
+  isMutedState = false;
+  muteUntilState = Date.now() + durationMs;
+  try {
+    localStorage.setItem('admin_orders_sound_muted', 'false');
+    localStorage.setItem(muteUntilKey, String(muteUntilState));
+  } catch {}
+  stopCurrentOrderChime();
+  notifySoundState();
+}
+
+function notifySoundState() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(ORDER_SOUND_EVENT));
+}
+
+function trackChimeNode(node: OscillatorNode) {
+  activeChimeNodes.add(node);
+  node.onended = () => { activeChimeNodes.delete(node); node.disconnect(); };
+}
+
+function stopCurrentOrderChime() {
+  for (const node of activeChimeNodes) {
+    try { node.stop(); node.disconnect(); } catch {}
+  }
+  activeChimeNodes.clear();
+  currentChimeUntil = 0;
 }
 
 export function isOrderAlertLoopActive(): boolean {
@@ -88,16 +130,15 @@ export function isOrderAlertLoopActive(): boolean {
  * Four-tone pos chime (D5 -> F#5 -> A5 -> D6) + double harmonic sustain chord.
  */
 export function playOrderAlertChime() {
-  if (isMutedState) return;
+  if (isOrderSoundMuted()) return;
 
   try {
     const ctx = getAudioContext();
-    if (!ctx || !soundEnabled) return;
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
+    if (!ctx || !soundEnabled || ctx.state !== 'running') return;
 
     const now = ctx.currentTime;
+    if (now < currentChimeUntil) return;
+    currentChimeUntil = now + 2.1;
 
     // Master bus gain
     const masterGain = ctx.createGain();
@@ -114,6 +155,7 @@ export function playOrderAlertChime() {
 
     notes.forEach(({ freq, start, dur, vol, type }) => {
       const osc = ctx.createOscillator();
+      trackChimeNode(osc);
       const gain = ctx.createGain();
 
       osc.type = type;
@@ -122,6 +164,7 @@ export function playOrderAlertChime() {
       // Subtle vibrato shimmer on the higher tones
       if (freq > 800) {
         const vibrato = ctx.createOscillator();
+        trackChimeNode(vibrato);
         const vibGain = ctx.createGain();
         vibrato.frequency.setValueAtTime(5.5, now + start);
         vibGain.gain.setValueAtTime(3.0, now + start);
@@ -146,6 +189,7 @@ export function playOrderAlertChime() {
     const chordNotes = [880.0, 1318.5]; // A5 + E6
     chordNotes.forEach((freq, idx) => {
       const chordOsc = ctx.createOscillator();
+      trackChimeNode(chordOsc);
       const chordGain = ctx.createGain();
       const chordStart = now + 0.72 + idx * 0.06;
 
@@ -161,6 +205,13 @@ export function playOrderAlertChime() {
 
       chordOsc.start(chordStart);
       chordOsc.stop(chordStart + 1.25);
+      if (idx === chordNotes.length - 1) {
+        chordOsc.onended = () => {
+          activeChimeNodes.delete(chordOsc);
+          chordOsc.disconnect();
+          masterGain.disconnect();
+        };
+      }
     });
   } catch (err) {
     console.warn('Audio playback notice:', err);
@@ -171,21 +222,72 @@ export function playOrderAlertChime() {
  * Starts continuous repeating alert loop as long as pending orders exist.
  * Interval defaults to 7 seconds.
  */
-export function startOrderAlertLoop(intervalMs = 7000) {
+export function startOrderAlertLoop(intervalMs = 7000, scope = 'default') {
   if (isLoopRunning) return;
   isLoopRunning = true;
-
-  // Play immediately on trigger
-  playOrderAlertChime();
-
-  // Schedule recurring chime
-  alertLoopTimer = setInterval(() => {
-    if (!isLoopRunning) {
-      if (alertLoopTimer) clearInterval(alertLoopTimer);
-      return;
-    }
+  const generation = ++loopGeneration;
+  const current = () => isLoopRunning && generation === loopGeneration;
+  const period = Math.max(3000, intervalMs);
+  const key = `novaesweb-order-alert:${scope}`;
+  const runOwned = () => {
+    if (!current()) return Promise.resolve();
     playOrderAlertChime();
-  }, intervalMs);
+    alertLoopTimer = setInterval(() => { if (current()) playOrderAlertChime(); }, period);
+    return new Promise<void>(resolve => {
+      releaseLoopOwnership = () => {
+        if (alertLoopTimer) clearInterval(alertLoopTimer);
+        alertLoopTimer = null;
+        stopCurrentOrderChime();
+        resolve();
+      };
+    });
+  };
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    ownershipAbort = new AbortController();
+    void navigator.locks.request(key, { signal: ownershipAbort.signal }, runOwned).catch(error => {
+      if (current() && error?.name !== 'AbortError') startLease();
+    });
+  } else startLease();
+
+  // Lease fallback for browsers without Web Locks. Confirm ownership before each
+  // strike; if storage is blocked, only the focused tab may produce audio.
+  function startLease() {
+    if (!current()) return;
+    const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    let lastStrike = -Infinity;
+    let candidateSince = 0;
+    const tick = () => {
+      if (!current()) return;
+      const now = Date.now();
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || 'null');
+        if (saved?.token !== token && saved?.expires > now) return;
+        if (saved?.token !== token) {
+          localStorage.setItem(key, JSON.stringify({ token, expires: now + 5000 }));
+          candidateSince = now;
+          return;
+        }
+        localStorage.setItem(key, JSON.stringify({ token, expires: now + 5000 }));
+        if (now - candidateSince < 500) return;
+      } catch {
+        if (typeof document === 'undefined' || !document.hasFocus()) return;
+      }
+      if (now - lastStrike >= period) {
+        playOrderAlertChime();
+        lastStrike = now;
+      }
+    };
+    tick();
+    alertLoopTimer = setInterval(tick, 1000);
+    releaseLoopOwnership = () => {
+      if (alertLoopTimer) clearInterval(alertLoopTimer);
+      alertLoopTimer = null;
+      try {
+        if (JSON.parse(localStorage.getItem(key) || 'null')?.token === token) localStorage.removeItem(key);
+      } catch {}
+      stopCurrentOrderChime();
+    };
+  }
 }
 
 /**
@@ -193,10 +295,16 @@ export function startOrderAlertLoop(intervalMs = 7000) {
  */
 export function stopOrderAlertLoop() {
   isLoopRunning = false;
+  loopGeneration += 1;
+  ownershipAbort?.abort();
+  ownershipAbort = null;
+  releaseLoopOwnership?.();
+  releaseLoopOwnership = null;
   if (alertLoopTimer) {
     clearInterval(alertLoopTimer);
     alertLoopTimer = null;
   }
+  stopCurrentOrderChime();
 }
 
 /**

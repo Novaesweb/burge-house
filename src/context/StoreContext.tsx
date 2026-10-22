@@ -51,7 +51,7 @@ import {
   subscribeSupportTicket,
   sendSupportMessage,
 } from '../services/storeService';
-import { playUrgentOrderSound } from '../utils/audioAlert';
+import { orderStageFromUrl } from '../utils/adminOrders';
 
 export type CustomerView =
   | 'home'
@@ -211,7 +211,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // App mode & subviews ('customer' | 'admin')
   const [appMode, setAppMode] = useState<'customer' | 'admin'>('customer');
   const [customerView, setCustomerView] = useState<CustomerView>('home');
-  const [adminView, setAdminView] = useState<AdminView>('dashboard');
+  const [adminView, setAdminView] = useState<AdminView>(() => orderStageFromUrl(window.location.href) ? 'orders' : 'dashboard');
+  useEffect(() => {
+    const onNavigation = () => { if (orderStageFromUrl(window.location.href)) setAdminView('orders'); };
+    window.addEventListener('popstate', onNavigation);
+    return () => window.removeEventListener('popstate', onNavigation);
+  }, []);
+  useEffect(() => {
+    if (adminView === 'orders') return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('etapa')) return;
+    url.searchParams.delete('etapa');
+    window.history.replaceState(window.history.state, '', url);
+  }, [adminView]);
 
   const addManualPaymentAction = async (payment: Omit<ManualPayment, 'id' | 'createdAt'>) => {
     await addManualPayment(siteId, payment);
@@ -530,9 +542,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     orderId: string,
     status: OrderStatus
   ) => {
-    await updateOrderStatus(siteId, orderId, status);
+    const current=orders.find(order=>order.id===orderId);
+    if(!current)throw new Error('O pedido não está disponível nesta loja.');
+    if(!navigator.onLine)throw new Error('Sem conexão. O pedido não foi atualizado.');
+    await updateOrderStatus(siteId, orderId, status, current.status);
     setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+      prev.map((o) => (o.id === orderId && o.status===current.status ? { ...o, status } : o))
     );
     if (activeOrder && activeOrder.id === orderId) {
       setActiveOrder((prev) => (prev ? { ...prev, status } : null));

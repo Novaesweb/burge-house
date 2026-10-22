@@ -21,7 +21,8 @@ function withoutSite<T extends {siteId:string}>(item:T) { const {siteId:_siteId,
 
 export function subscribeRemote<T>(siteId:string, table:string, fetcher:()=>Promise<T>, onData:(value:T)=>void, interval=30_000):()=>void {
   let active=true;let fetching=false;
-  const refresh=async()=>{if(!active||fetching)return;fetching=true;try{const value=await fetcher();if(active)onData(value);}catch(error){if(active)dataError(error);}finally{fetching=false;}};
+  const orderConnection=(connected:boolean)=>{if(active&&table==='delivery_orders')window.dispatchEvent(new CustomEvent('delivery-orders-connection',{detail:{siteId,connected}}));};
+  const refresh=async()=>{if(!active||fetching)return;fetching=true;try{const value=await fetcher();if(active){onData(value);orderConnection(true);}}catch(error){if(active){dataError(error);orderConnection(false);}}finally{fetching=false;}};
   const client=requireSupabase();
   const channel=client.channel(`delivery:${table}:${siteId}:${crypto.randomUUID()}`).on('postgres_changes',{event:'*',schema:'public',table,filter:`store_id=eq.${siteId}`},()=>void refresh()).subscribe();
   const onVisible=()=>{if(document.visibilityState==='visible')void refresh();};
@@ -144,7 +145,16 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
   const accesses=guestOrders(siteId);localStorage.setItem(`delivery:order-access:${siteId}`,JSON.stringify([{id:result.id,token:attempt.token},...accesses.filter(item=>item.id!==result.id)].slice(0,50)));
   localStorage.removeItem(attemptKey);notify();return result;
 }
-export async function updateRemoteOrder(siteId:string,id:string,changes:{status?:string;is_paid?:boolean}){const {error}=await requireSupabase().from('delivery_orders').update(changes).eq('store_id',siteId).eq('id',id).select('id').single();assertResult(error);notify();}
+export async function updateRemoteOrder(siteId:string,id:string,changes:{status?:string;is_paid?:boolean},expectedStatus?:string){
+  let query=requireSupabase().from('delivery_orders').update(changes).eq('store_id',siteId).eq('id',id);
+  // The database checks this predicate atomically: only one staff member can
+  // move an order from the status they actually saw. Payment updates are unchanged.
+  if(expectedStatus!==undefined)query=query.eq('status',expectedStatus);
+  const {data,error}=await query.select('id').maybeSingle();
+  if(error){notify();assertResult(error);}
+  if(!data){notify();throw new Error('Este pedido já foi atualizado por outro funcionário ou não está mais disponível. Aguarde a atualização da fila.');}
+  notify();
+}
 export async function reviewRemoteOrder(siteId:string,id:string,review:OrderReview){const access=guestOrders(siteId).find(item=>item.id===id);if(!access)throw new Error('Este navegador não tem acesso a esse pedido.');const{error}=await requireSupabase().rpc('delivery_review_order',{p_store_id:siteId,p_order_id:id,p_access_token:access.token,p_review:review});assertResult(error);notify();}
 export function subscribeRemoteCustomers(siteId:string,onData:(value:Customer[])=>void){return subscribeRemote(siteId,'delivery_customers',async()=>{
   if(connectedStore?.id!==siteId)return[];const{data,error}=await requireSupabase().from('delivery_customers').select('id,payload,created_at').eq('store_id',siteId);assertResult(error);return(data||[]).map(row=>({...row.payload,id:row.id,siteId,createdAt:row.created_at} as Customer));

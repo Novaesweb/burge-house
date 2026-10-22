@@ -113,6 +113,18 @@ await test('viewer não altera pedidos e staff só altera campos autorizados',as
  await role('authenticated',V,async()=>assert.equal((await query("update delivery_orders set status='preparando' where id=$1 returning id",[order.id])).rows.length,0));
  await role('authenticated',S,async()=>{await denied(()=>query('update delivery_orders set total_cents=1 where id=$1',[order.id]));await query("update delivery_orders set status='entregue' where id=$1",[order.id]);});
 });
+await test('aceite condicionado permite só um atendente e não altera pagamento nem histórico',async()=>{
+ await db.exec('begin');
+ try{
+  await query("update delivery_orders set status='recebido' where id=$1",[order.id]);
+  const before=await one('select is_paid,payload,total_cents from delivery_orders where id=$1',[order.id]);
+  const first=await role('authenticated',S,()=>query("update delivery_orders set status='preparando' where store_id=$1 and id=$2 and status='recebido' returning id",[storeA,order.id]));
+  const second=await role('authenticated',A,()=>query("update delivery_orders set status='cancelado' where store_id=$1 and id=$2 and status='recebido' returning id",[storeA,order.id]));
+  assert.equal(first.rows.length,1);assert.equal(second.rows.length,0);
+  const after=await one('select status,is_paid,payload,total_cents from delivery_orders where id=$1',[order.id]);
+  assert.equal(after.status,'preparando');assert.equal(after.is_paid,before.is_paid);assert.equal(after.total_cents,before.total_cents);assert.deepEqual(after.payload,before.payload);
+ }finally{await db.exec('rollback');}
+});
 await test('avaliação só com chave do cliente, uma vez, após entrega',()=>role('anon',null,async()=>{await denied(()=>query('select delivery_review_order($1,$2,$3,$4)',[storeA,order.id,tokenB,{foodRating:5,deliveryRating:5}]));await query('select delivery_review_order($1,$2,$3,$4)',[storeA,order.id,token,{foodRating:5,deliveryRating:5}]);await denied(()=>query('select delivery_review_order($1,$2,$3,$4)',[storeA,order.id,token,{foodRating:4,deliveryRating:4}]));}));
 await test('vínculo inativo bloqueia escrita',async()=>{await query('update store_members set is_active=false where store_id=$1 and user_id=$2',[storeA,A]);await denied(()=>importCatalog(storeA,A));await query('update store_members set is_active=true where store_id=$1 and user_id=$2',[storeA,A]);});
 await test('loja suspensa não aceita checkout ou leitura pública',async()=>{await query("update managed_sites set status='suspended' where id=$1",[storeA]);await role('anon',null,async()=>{assert.equal((await one('select count(*)::int as count from delivery_products where store_id=$1',[storeA])).count,0);await denied(()=>query('select delivery_place_order($1,$2,gen_random_uuid(),$3)',[storeA,orderRequest,token]));});});

@@ -39,7 +39,11 @@ async function updateOrder(siteId: string, id: string, changes: Partial<Order>):
   const list = readLocal<Order[]>(key(siteId, 'orders'), []);
   writeLocal(key(siteId, 'orders'), list.map(item => item.id === id ? { ...item, ...changes, updatedAt: new Date().toISOString() } : item));
 }
-export async function updateOrderStatus(siteId: string, id: string, status: OrderStatus): Promise<void> { await updateOrder(siteId, id, { status }); }
+export async function updateOrderStatus(siteId: string, id: string, status: OrderStatus, expectedStatus?: string): Promise<void> {
+  const current=readLocal<Order[]>(key(siteId,'orders'),[]).find(item=>item.id===id);
+  if(!current||(expectedStatus!==undefined&&current.status!==expectedStatus))throw new Error('Este pedido já foi atualizado. Aguarde a atualização da fila.');
+  await updateOrder(siteId, id, { status });
+}
 export async function updateOrderPaymentStatus(siteId: string, id: string, isPaid: boolean): Promise<void> { await updateOrder(siteId, id, { isPaid, paymentStatus: isPaid ? 'paid' : 'pending' }); }
 export async function submitOrderReview(siteId: string, id: string, review: OrderReview): Promise<void> { await updateOrder(siteId, id, { review }); }
 export function subscribeCustomers(siteId: string, onData: (value: Customer[]) => void) { return subscribeLocal<Customer[]>(key(siteId, 'customers'), [], onData); }

@@ -12,6 +12,19 @@ export const ORDER_STAGES = [
   {id:'cancelado',label:'Cancelados',short:'Cancelado',tone:'gray'},
 ] as const;
 
+export type OrderStageView = 'todos' | typeof ORDER_STAGES[number]['id'];
+
+export function orderStageFromUrl(href: string): OrderStageView | null {
+  const stage = new URL(href).searchParams.get('etapa');
+  return stage === 'todos' || ORDER_STAGES.some(item => item.id === stage) ? stage as OrderStageView : null;
+}
+
+export function orderStageUrl(href: string, stage: OrderStageView): string {
+  const url = new URL(href);
+  url.searchParams.set('etapa', stage);
+  return url.href;
+}
+
 export function normalizeOrderStatus(status: string): OrderStatus {
   if(status==='pronto')return 'itens_separados';
   if(status==='aguardando_entregador'||status==='entregador_aceitou')return 'esperando_motoboy';
@@ -21,6 +34,11 @@ export function orderStage(status:string) {return ORDER_STAGES.find(stage=>stage
 export function nextOrderAction(status:string) {
   const stage=orderStage(status);
   return stage && 'next' in stage ? {status:stage.next as OrderStatus,label:stage.action} : null;
+}
+export function pendingOrderQueue(orders:Order[]) {
+  return orders.filter(order=>normalizeOrderStatus(order.status)==='recebido').sort((a,b)=>
+    new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()||String(a.id).localeCompare(String(b.id))
+  );
 }
 export function orderCounts(orders:Order[]) {
   return Object.fromEntries(ORDER_STAGES.map(stage=>[stage.id,orders.filter(order=>normalizeOrderStatus(order.status)===stage.id).length])) as Record<OrderStatus,number>;
