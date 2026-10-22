@@ -36,6 +36,7 @@ $marketingDir = New-Item -ItemType Directory -Path (Join-Path $resolvedService '
 $statusDir = New-Item -ItemType Directory -Path (Join-Path $resolvedService 'backend/whatsapp') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'worker.mjs'),(Join-Path $PSScriptRoot 'run.ps1') -Destination $marketingDir.FullName
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../whatsapp/worker.mjs') -Destination $statusDir.FullName
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../whatsapp/storeConnection.mjs') -Destination $statusDir.FullName
 $token = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
 $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($token))).ToLowerInvariant()
 $configuration = @(

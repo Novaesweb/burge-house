@@ -45,3 +45,17 @@ Advisors após instalação: as novas tabelas privadas têm RLS sem políticas e
 
 Documentação consultada: https://supabase.com/docs/guides/functions/schedule-functions e https://supabase.com/docs/guides/database/extensions/pg_net. A fila persistente e o worker dispensam URL pública para a Evolution local.
 
+# Conexão dedicada por loja
+
+O worker possui dois modos. `WHATSAPP_INSTANCE_MODE=legacy` (padrão quando a variável não está definida) conserva a instância fixa já instalada. `WHATSAPP_INSTANCE_MODE=store` deriva exclusivamente do UUID oficial o nome `nw_<UUID sem hífens>`, ignora `EVOLUTION_INSTANCE` e verifica o contato atual em `delivery_settings` e o `ownerJid` conectado no Evolution antes de cada novo processamento. Não existe autorização por número de telefone ou ID NX.
+
+Neste modo, o cadastro deve retornar exatamente uma configuração pública da loja com `payload.phone` e `payload.name`. A consulta utiliza a chave pública e respeita as políticas existentes; configuração inacessível, loja suspensa, telefone inválido, instância desconectada ou telefone divergente suspendem novos envios. O worker tenta conferir novamente após 30 segundos, mantendo os pedidos pendentes. A configuração é consultada novamente depois de obter o evento, imediatamente antes do envio. Se o número mudar nesse intervalo, o mesmo identificador de claim é mantido no diário para recuperação.
+
+As fases `dispatching` e `finish` do diário são recuperadas mesmo sem conexão, pois confirmar um envio já realizado ou marcar um resultado incerto não exige nova mensagem. Não apague nem mova `.claim.json` durante a migração. Nunca execute dois workers para a mesma loja simultaneamente. O texto usa o nome atual da loja no modo `store`; o modo legado preserva o texto anterior.
+
+Para migrar uma instalação, primeiro conecte e confira a instância dedicada, pare o worker antigo, preserve seu diário e instale juntos `worker.mjs` e `storeConnection.mjs`, alterando somente a configuração privada para `WHATSAPP_INSTANCE_MODE=store`. A conexão do novo número exige autorização no celular. Alterar o telefone público não cria uma sessão WhatsApp autorizada. Não desconecte a instância legada compartilhada para migrar uma loja.
+
+Esta entrega prepara o código do worker; não modifica automaticamente o serviço já instalado. O worker de marketing continua com configuração própria e não foi migrado: seu telefone privado, consentimentos, cursor de entrada e vínculo da instância precisam ser alinhados separadamente antes de ativar envios pelo novo remetente. Não altere esses dados automaticamente com base no telefone público.
+
+Verificação local sem envios reais: `node --test --test-isolation=none tests/store-connection.mjs tests/whatsapp.mjs`. Os testes cobrem instâncias de duas lojas, telefone divergente, três trocas consecutivas, mudança entre claim e dispatch, recuperação sem conexão e mensagens de erro sem credenciais. Não comprovam pareamento real nem isolamento de duas contas WhatsApp reais.
+

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { PaymentMethod } from '../../types';
+import { WhatsAppConnection } from './WhatsAppConnection';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -62,6 +63,7 @@ export const AdminSettings: React.FC = () => {
 
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const handleCopy = (text: string, field: string) => {
     navigator.clipboard.writeText(text);
@@ -80,7 +82,10 @@ export const AdminSettings: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError('');
+    setSuccessMsg('');
     setIsSaving(true);
+    try {
     await Promise.all([
       updateSettingsAction({
         name,
@@ -107,9 +112,11 @@ export const AdminSettings: React.FC = () => {
         email: adminResponsibleEmail,
       }),
     ]);
-    setIsSaving(false);
-    setSuccessMsg('Configurações da Loja e Dados do ADM salvos neste navegador com sucesso!');
+    setSuccessMsg('Configurações salvas. Se alterou o número, conecte o novo WhatsApp abaixo.');
     setTimeout(() => setSuccessMsg(''), 4000);
+    } catch {
+      setSaveError('Não foi possível concluir o salvamento. Confira sua conexão e tente novamente.');
+    } finally { setIsSaving(false); }
   };
 
   return (
@@ -134,6 +141,7 @@ export const AdminSettings: React.FC = () => {
       )}
 
       {/* Settings Form */}
+      {saveError && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{saveError}</p>}
       <form onSubmit={handleSave} className="space-y-6">
         {/* Section: Informações Básicas */}
         <div className="bg-neutral-900 rounded-3xl p-6 border border-neutral-800 space-y-4">
@@ -426,6 +434,7 @@ export const AdminSettings: React.FC = () => {
           </button>
         </div>
       </form>
+      <WhatsAppConnection />
     </div>
   );
 };
