@@ -43,6 +43,14 @@
 .pending-order-list li strong,.pending-order-list li div>span{display:block;overflow-wrap:anywhere}.pending-order-list li div>span{font-size:11px;color:#a58f98;margin-top:5px}.pending-order-list>p{font-size:12px;color:#a58f98;padding:0 16px 16px}
 .order-kanban-board{display:grid;grid-template-columns:repeat(7,minmax(220px,1fr));gap:12px;overflow-x:auto;align-items:stretch;padding-bottom:12px;scrollbar-width:thin}
 .order-kanban-board.is-list{grid-template-columns:minmax(0,1fr)}.order-kanban-board.is-list .order-kanban-column{min-height:0}.order-kanban-board.is-list .kanban-empty{min-height:100px}
+.kanban-card-actions{display:flex;flex-direction:column;gap:8px}
+.kanban-card-actions .order-primary{min-height:46px;font-size:12px;line-height:1.4;white-space:normal;text-align:left}
+.kanban-card-actions .kanban-open-order{min-height:40px;background:transparent}
+.order-primary:focus-visible,.kanban-open-order:focus-visible{outline:2px solid var(--tone,#fff);outline-offset:3px}
+.order-attention-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto}
+.order-attention:has(.order-attention-actions){flex-wrap:wrap}
+.order-attention .order-attention-actions .order-primary{width:auto;min-height:44px;padding:10px 14px;background:var(--tone-solid);border:1px solid var(--tone-border);border-radius:8px;color:#fff;gap:10px;font-size:12px;font-weight:700}
+@media(max-width:767px){.order-attention-actions{width:100%;margin-left:0}.order-attention .order-attention-actions .order-primary{flex:1}}
 .order-list-controls{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 10px;margin-top:10px;border-top:1px solid #ffffff12;color:#b8aaba;font-size:11px;text-align:center}
 .order-list-controls p{margin:0;font-variant-numeric:tabular-nums}.order-list-controls>div{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
 .order-list-controls button{min-height:40px;border:1px solid var(--tone-border,#665066);background:#ffffff06;color:var(--tone,#e8cde3);padding:8px 12px;border-radius:8px;font-size:11px;font-weight:650}

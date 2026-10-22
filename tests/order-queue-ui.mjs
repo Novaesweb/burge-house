@@ -6,6 +6,7 @@ import { NewOrderQueue } from '../src/components/admin/NewOrderQueue.tsx';
 import { OrderStageBoard } from '../src/components/admin/OrderStageBoard.tsx';
 import { ORDER_STAGES } from '../src/utils/adminOrders.ts';
 import { OrderListControls } from '../src/components/admin/OrderListControls.tsx';
+import { OrderAdvanceButton } from '../src/components/admin/OrderCard.tsx';
 
 const order=(id,status='recebido')=>({id:String(id),siteId:'test-store',orderNumber:id,status,createdAt:new Date(Date.parse('2026-10-22T10:00:00Z')+id*60000).toISOString(),updatedAt:new Date(Date.parse('2026-10-22T10:00:00Z')+id*60000).toISOString(),customerName:`Cliente ${id}`,customerPhone:'11900000000',deliveryAddress:{street:'Rua de Teste',number:'1'},paymentMethod:'pix',isPaid:false,items:[{productId:'product',name:'Produto fictício',quantity:1,price:20}],total:20});
 const render=(orders,extra={})=>renderToStaticMarkup(React.createElement(NewOrderQueue,{orders,now:Date.parse('2026-10-22T11:00:00Z'),busyIds:[],search:'',connected:true,onAccept(){},onReject(){},onDetails(){},onPrint(){},onWhatsApp(){},...extra}));
@@ -78,4 +79,40 @@ test('display controls allow four more, all, and collapse without changing order
  expanded.props.children[1].props.children[1].props.onClick();
  assert.deepEqual(changes,[8,Infinity,4]);
  assert.equal(OrderListControls({total:4,limit:4,onLimitChange(){}}),null);
+});
+
+test('quick buttons advance only to the existing next step without opening details',()=>{
+ const moves=[];
+ const steps=[['recebido','preparando','Iniciar preparo'],['preparando','itens_separados','Marcar como separado'],['itens_separados','esperando_motoboy','Aguardar motoboy'],['esperando_motoboy','saiu_para_entrega','Saiu para entrega'],['saiu_para_entrega','entregue','Marcar como entregue']];
+ for(const [status,next,label] of steps){
+  const button=OrderAdvanceButton({order:order(1,status),onAdvance:value=>moves.push(value)});
+  assert.equal(button.props.type,'button');
+  assert.equal(button.props['aria-label'],`Pedido #1: ${label}`);
+  button.props.onClick();
+  assert.equal(moves.at(-1),next);
+ }
+ assert.equal(moves.length,5);
+ for(const status of ['entregue','cancelado'])assert.equal(OrderAdvanceButton({order:order(1,status),onAdvance(){throw new Error('TERMINAL_ORDER_MUST_NOT_MOVE');}}),null);
+});
+
+test('busy and disconnected quick actions cannot dispatch a status update',()=>{
+ for(const props of [{busy:true},{disabled:true}]){
+  const button=OrderAdvanceButton({order:order(1,'preparando'),...props,onAdvance(){throw new Error('MUST_NOT_UPDATE');}});
+  assert.equal(button.props.disabled,true);
+  button.props.onClick();
+ }
+});
+
+test('overview exposes quick actions on active stages and keeps received orders oldest first',()=>{
+ const snapshot=ORDER_STAGES.map((stage,index)=>order(index+1,stage.id));snapshot.push(order(8));
+ const props={orders:snapshot,search:'',now:Date.parse('2026-10-22T11:00:00Z'),onOpenStage(){},onDetails(){},onWhatsApp(){},onAdvance(){}};
+ const html=renderToStaticMarkup(React.createElement(OrderStageBoard,props));
+ assert.equal((html.match(/class="order-primary /g)||[]).length,5);
+ assert.ok(html.includes('aria-label="Pedido #1: Iniciar preparo"'));
+ assert.ok(!html.includes('aria-label="Pedido #8: Iniciar preparo"'));
+ assert.ok(!html.includes('aria-label="Pedido #6: Marcar como entregue"'));
+ const blocked=renderToStaticMarkup(React.createElement(OrderStageBoard,{...props,connected:false}));
+ assert.equal((blocked.match(/class="order-primary [^"]*" disabled=""/g)||[]).length,5);
+ const updating=renderToStaticMarkup(React.createElement(OrderStageBoard,{...props,busyIds:['2']}));
+ assert.match(updating,/disabled="" aria-busy="true" aria-label="Pedido #2: Marcar como separado"/);
 });

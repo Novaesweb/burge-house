@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowRight, Clock, Eye, MessageCircle, MapPin } from 'lucide-react';
-import type { Order } from '../../types';
+import type { Order, OrderStatus } from '../../types';
 import { ORDER_STAGES, formatOrderAddress, pendingOrderQueue, selectOrders, type OrderStageView } from '../../utils/adminOrders';
 import { formatBRL } from '../../utils/formatters';
-import { STATUS_ICONS } from './OrderCard';
+import { OrderAdvanceButton, STATUS_ICONS } from './OrderCard';
 import { ORDER_PAGE_SIZE, OrderListControls } from './OrderListControls';
 
-export function OrderStageBoard({ orders, search, now, list=false, onOpenStage, onDetails, onWhatsApp }: {
+export function OrderStageBoard({ orders, search, now, list=false, busyIds=[], connected=true, onAdvance, onOpenStage, onDetails, onWhatsApp }: {
   orders:Order[]; search:string; now:number; list?:boolean; onOpenStage:(stage:OrderStageView)=>void;
+  busyIds?:string[];connected?:boolean;onAdvance?:(order:Order,status:OrderStatus)=>void;
   onDetails:(order:Order)=>void; onWhatsApp:(order:Order)=>void;
 }) {
   const pending=pendingOrderQueue(orders);
@@ -27,7 +28,10 @@ export function OrderStageBoard({ orders, search, now, list=false, onOpenStage, 
           <p className="kanban-address"><MapPin size={13}/>{formatOrderAddress(order)}</p>
           {!['entregue','cancelado'].includes(stage.id)&&<ul className="kanban-items">{order.items.map((item,index)=><li key={`${item.productId}:${index}`}><b>{item.quantity}×</b><span>{item.name}</span></li>)}</ul>}
           <div className="kanban-total"><span>{order.items.reduce((count,item)=>count+item.quantity,0)} itens</span><strong>{formatBRL(order.total)}</strong></div>
-          <button className="kanban-open-order" onClick={()=>stage.id==='recebido'?onOpenStage('recebido'):onDetails(order)}>{stage.id==='recebido'?<ArrowRight size={14}/>:<Eye size={14}/>} {stage.id==='recebido'?'Atender fila':'Ver pedido'}</button>
+          <div className="kanban-card-actions">
+            {onAdvance&&<OrderAdvanceButton order={order} busy={busyIds.includes(order.id)} disabled={!connected} onAdvance={status=>onAdvance(order,status)}/>}
+            <button className="kanban-open-order" onClick={()=>stage.id==='recebido'?onOpenStage('recebido'):onDetails(order)}>{stage.id==='recebido'?<ArrowRight size={14}/>:<Eye size={14}/>} {stage.id==='recebido'?'Atender fila':'Ver pedido'}</button>
+          </div>
         </article>)}
         {stage.id!=='recebido'&&<OrderListControls total={stageOrders.length} limit={limit} onLimitChange={value=>setLimits(previous=>({...previous,[stage.id]:value}))}/>}
         {stage.id==='recebido'&&pending.length>1&&<button className="kanban-queue-count" onClick={()=>onOpenStage('recebido')}>+ {pending.length-1} pedido(s) na fila recolhida<ArrowRight size={15}/></button>}

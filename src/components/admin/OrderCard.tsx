@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight, Banknote, Bike, Boxes, CheckCircle2, ChefHat, Clock, Eye, MapPin, MessageCircle, Package, Printer, QrCode, CreditCard, XCircle } from 'lucide-react';
-import type { Order } from '../../types';
+import type { Order, OrderStatus } from '../../types';
 import { formatBRL } from '../../utils/formatters';
 import { formatOrderAddress, nextOrderAction, normalizeOrderStatus, orderStage } from '../../utils/adminOrders';
 
@@ -9,12 +9,19 @@ export function OrderStatusBadge({status}:{status:string}) {
   const stage=orderStage(status);const Icon=STATUS_ICONS[normalizeOrderStatus(status)]||Package;
   return <span className={`order-status tone-${stage?.tone||'gray'}`}><Icon size={14}/>{stage?.short||status}</span>;
 }
+export function OrderAdvanceButton({order,busy=false,disabled=false,receiving=false,onAdvance}:{
+  order:Order;busy?:boolean;disabled?:boolean;receiving?:boolean;onAdvance:(status:OrderStatus)=>void;
+}) {
+  const next=nextOrderAction(order.status);
+  if(!next)return null;
+  const label=receiving?'Aceitar pedido':next.label;
+  return <button type="button" className={`order-primary tone-${orderStage(order.status)?.tone||'red'}`} disabled={busy||disabled} aria-busy={busy} aria-label={`Pedido #${order.orderNumber}: ${label}`} onClick={()=>{if(!busy&&!disabled)onAdvance(next.status);}}>{busy?'Atualizando…':label}<ArrowRight size={16} aria-hidden="true"/></button>;
+}
 export function OrderCard({order,now,busy,onAdvance,onPayment,onDetails,onPrint,onWhatsApp,showPrint=true,showWhatsApp=true,list=false,receiving=false,actionsDisabled=false,onReject}:{
   order:Order;now:number;busy:boolean;list?:boolean;showPrint?:boolean;showWhatsApp?:boolean;receiving?:boolean;actionsDisabled?:boolean;onReject?:()=>void;onAdvance:()=>void;onPayment:()=>void;onDetails:()=>void;onPrint:()=>void;onWhatsApp:()=>void;
 }) {
   const stage=orderStage(order.status);const isNew=normalizeOrderStatus(order.status)==='recebido';
   const minutes=Math.max(0,Math.floor((now-new Date(order.createdAt).getTime())/60000));
-  const next=nextOrderAction(order.status);
   const PaymentIcon=order.paymentMethod==='pix'?QrCode:order.paymentMethod==='cash'?Banknote:CreditCard;
   const payment=order.paymentMethod==='pix'?'Pix':order.paymentMethod==='cash'?'Dinheiro':order.paymentMethod==='credit_card'?'Cartão':order.paymentMethod;
   return <article className={`delivery-order-card tone-${stage?.tone||'gray'} ${isNew?'is-new':''} ${list?'is-list':''} ${receiving?'is-receiving':''}`} data-order-id={order.id} aria-label={`Pedido ${order.orderNumber}`}>
@@ -26,6 +33,6 @@ export function OrderCard({order,now,busy,onAdvance,onPayment,onDetails,onPrint,
     {order.notes&&<p className="order-note"><strong>Observação do cliente</strong>{order.notes}</p>}
     <div className="order-payment"><div><span><PaymentIcon size={15}/>{payment}</span>{order.paymentChange&&<small>Troco para {order.paymentChange}</small>}{receiving?<span className={`payment-state ${order.isPaid?'paid':'pending'}`}>{order.isPaid?'Pago':'Pagamento pendente'}</span>:<button disabled={busy} className={`payment-state ${order.isPaid?'paid':'pending'}`} onClick={onPayment} title={order.isPaid?'Marcar pagamento como pendente':'Confirmar pagamento'}>{order.isPaid?<CheckCircle2 size={13}/>:<Clock size={13}/>} {order.isPaid?'Pago':'Pendente'} · {order.isPaid?'reverter':'confirmar'}</button>}</div><div className="order-total"><span>Total</span><strong>{formatBRL(order.total)}</strong></div></div>
     {receiving&&<section className="order-records" aria-label="Histórico do pedido"><h4>Histórico do pedido</h4><p><span>Recebido em</span><time>{new Date(order.createdAt).toLocaleString('pt-BR')}</time></p><p><span>Última atualização registrada</span><time>{new Date(order.updatedAt).toLocaleString('pt-BR')}</time></p></section>}
-    <footer className="order-card-actions">{next&&<button className={`order-primary tone-${stage?.tone||'red'}`} disabled={busy||actionsDisabled} onClick={onAdvance}>{busy?'Aguardando confirmação…':receiving?'Aceitar pedido':next.label}<ArrowRight size={16}/></button>}{receiving&&onReject&&<button className="order-reject" disabled={busy||actionsDisabled} onClick={onReject}><XCircle size={17}/>Recusar pedido</button>}<div className="order-secondary-actions"><button onClick={onDetails}><Eye size={15}/>{receiving||order.status==='entregue'?'Detalhes e histórico':'Ver detalhes'}</button>{showPrint&&<button onClick={onPrint} aria-label={`Imprimir pedido ${order.orderNumber}`} title="Imprimir comanda"><Printer size={16}/><span>Imprimir</span></button>}</div></footer>
+    <footer className="order-card-actions"><OrderAdvanceButton order={order} busy={busy} disabled={actionsDisabled} receiving={receiving} onAdvance={onAdvance}/>{receiving&&onReject&&<button className="order-reject" disabled={busy||actionsDisabled} onClick={onReject}><XCircle size={17}/>Recusar pedido</button>}<div className="order-secondary-actions"><button onClick={onDetails}><Eye size={15}/>{receiving||order.status==='entregue'?'Detalhes e histórico':'Ver detalhes'}</button>{showPrint&&<button onClick={onPrint} aria-label={`Imprimir pedido ${order.orderNumber}`} title="Imprimir comanda"><Printer size={16}/><span>Imprimir</span></button>}</div></footer>
   </article>;
 }
