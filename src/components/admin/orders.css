@@ -43,6 +43,11 @@
 .pending-order-list li strong,.pending-order-list li div>span{display:block;overflow-wrap:anywhere}.pending-order-list li div>span{font-size:11px;color:#a58f98;margin-top:5px}.pending-order-list>p{font-size:12px;color:#a58f98;padding:0 16px 16px}
 .order-kanban-board{display:grid;grid-template-columns:repeat(7,minmax(220px,1fr));gap:12px;overflow-x:auto;align-items:stretch;padding-bottom:12px;scrollbar-width:thin}
 .order-kanban-board.is-list{grid-template-columns:minmax(0,1fr)}.order-kanban-board.is-list .order-kanban-column{min-height:0}.order-kanban-board.is-list .kanban-empty{min-height:100px}
+.order-list-controls{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 10px;margin-top:10px;border-top:1px solid #ffffff12;color:#b8aaba;font-size:11px;text-align:center}
+.order-list-controls p{margin:0;font-variant-numeric:tabular-nums}.order-list-controls>div{display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+.order-list-controls button{min-height:40px;border:1px solid var(--tone-border,#665066);background:#ffffff06;color:var(--tone,#e8cde3);padding:8px 12px;border-radius:8px;font-size:11px;font-weight:650}
+.order-list-controls button:hover{background:#ffffff10}.order-list-controls button:focus-visible{outline:2px solid var(--tone,#e8cde3);outline-offset:3px}
+.pending-order-list .order-list-controls{margin:0 16px 14px}
 .order-kanban-column{border:1px solid var(--tone-border);border-radius:13px;overflow:hidden;background:linear-gradient(180deg,var(--tone-bg),#101014 350px);min-height:520px}
 .order-kanban-heading{width:100%;padding:15px 12px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--tone-border);background:var(--tone-bg);color:var(--tone);text-align:left}
 .order-kanban-heading>span{flex:1;min-width:0}.order-kanban-heading strong{font-size:12px;display:block}.order-kanban-heading small{font-size:10px;display:block;margin-top:5px;color:#c5b9c9}.order-kanban-heading>b{padding:4px 7px;background:var(--tone);border-radius:6px;color:#141018;font-size:11px}

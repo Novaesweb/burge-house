@@ -28,7 +28,7 @@ export function ConnectGate() {
     <a href="/" className="connect-back"><ArrowLeft size={16}/> Voltar à loja</a>
     <div className="connect-icon"><Store size={28}/></div>
     <p className="connect-eyebrow">BURGER HOUSE · NOVAESWEB CONNECT</p>
-    <h1>{!connection.session ? 'Acesse sua loja' : hasOfficialStore ? 'Validar acesso ao painel' : connection.registration?.status === 'pending_approval' ? 'Aguardando o Master' : 'Conectar ao Painel Master'}</h1>
+    <h1>{connection.loading ? 'Conferindo acesso à loja' : !connection.session ? 'Acesse sua loja' : hasOfficialStore ? 'Acesso ao painel' : connection.registration?.status === 'pending_approval' ? 'Aguardando o Master' : 'Conectar ao Painel Master'}</h1>
     {!isSupabaseConfigured ? <p role="alert">Configure a URL e a chave pública do projeto central para continuar.</p> : connection.loading ? <p>Conferindo sua sessão…</p> : !connection.session ? <>
       <p>Entre com sua conta confirmada do Supabase central para gerenciar a loja e solicitar a conexão.</p>
       <form onSubmit={login}><label>E-mail<input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>Senha<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label><button disabled={busy} type="submit"><LogIn size={17}/>{busy ? 'Entrando…' : 'Entrar'}</button></form>
@@ -36,7 +36,7 @@ export function ConnectGate() {
       <p className="connect-help">Use a conta central do proprietário. O link de senha abre este painel novamente.</p>
     </> : hasOfficialStore ? <>
       <p className="connect-account">Conectado como {connection.session.user.email}</p>
-      <div className="connect-status"><strong>Loja já conectada ao Master</strong><p>Vamos conferir se esta conta tem vínculo ativo com a Burger House.</p><button disabled={busy} onClick={()=>void run(()=>connection.refresh())}><RefreshCw size={16}/>Validar acesso novamente</button></div>
+      <div className="connect-status"><strong>Não foi possível concluir o acesso</strong><p>A verificação é automática. Confira a conexão e tente novamente se houver uma falha.</p><button disabled={busy} onClick={()=>void run(()=>connection.refresh())}><RefreshCw size={16}/>Tentar novamente</button></div>
       <p className="connect-help">Entre com a conta central vinculada à loja. Se o aviso continuar, peça ao Master para liberar seu acesso.</p>
       <button className="connect-secondary" disabled={busy} onClick={()=>void run(connection.signOut)}><LogOut size={16}/>Sair da conta</button>
     </> : <>

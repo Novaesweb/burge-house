@@ -11,6 +11,7 @@
     "lint": "tsc --noEmit",
     "test:db": "node tests/database.mjs",
     "test:orders": "node --import tsx --test --test-isolation=none tests/admin-orders.mjs tests/order-queue-ui.mjs tests/order-audio.mjs",
+    "test:connect": "node --test --test-isolation=none tests/connect-session.mjs",
     "test:marketing": "node tests/marketing-database.mjs && node --test --test-isolation=none tests/marketing-worker.mjs"
   },
   "dependencies": {
