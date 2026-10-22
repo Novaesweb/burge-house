@@ -2,6 +2,7 @@ import React from 'react';
 import { Clock, Phone, MapPin } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import burgerHouseLogo from '../assets/brand/burger-house-logo.png';
+import { whatsappNumber } from '../utils/adminOrders';
 
 export const Footer: React.FC = () => {
   const { siteSettings } = useStore();
@@ -51,7 +52,7 @@ export const Footer: React.FC = () => {
         <nav aria-label="Informações legais" className="flex flex-wrap justify-center gap-4 border-t border-neutral-900 pt-4 text-xs font-semibold">
           <a href="#/privacidade" className="text-neutral-300 hover:text-red-400 underline-offset-4 hover:underline">Política de Privacidade</a>
           <a href="#/termos" className="text-neutral-300 hover:text-red-400 underline-offset-4 hover:underline">Termos de Uso</a>
-          {siteSettings.phone && <a href={`https://wa.me/55${siteSettings.phone.replace(/\\D/g,'') .replace(/^55/,'')}`} target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-red-400">Contato</a>}
+          {siteSettings.phone && <a href={`https://wa.me/${whatsappNumber(siteSettings.phone)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-300 hover:text-red-400">Contato</a>}
         </nav>
         <p className="text-center text-[11px] text-amber-300/90">Loja fictícia de demonstração. Não realiza vendas nem entregas reais.</p>
         {/* Bottom Credits */}

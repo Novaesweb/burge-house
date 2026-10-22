@@ -31,7 +31,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   paymentStatus: 'paid',
   dueDate: '2026-12-31',
   plan: 'Pro Delivery',
-  phone: '(11) 98765-4321',
+  phone: '(51) 99118-9293',
   address: 'Av. Paulista, 1000 - Bela Vista, São Paulo - SP',
   openingHours: 'Hoje - 10:00 às 23:00',
   deliveryFee: 5.0,
