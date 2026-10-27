@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { requireSupabase } from '../../lib/supabase';
+import {useConnect} from '../../context/ConnectContext';
+import {loadPremiumFeatures} from '../../services/premiumFeatureService';
 
 type Coupon = { store_id: string; code: string; discount_type: 'percent'|'fixed'; discount_value: number; min_order: number; max_uses: number|null; used_count: number; expires_at: string|null; starts_at: string|null; active: boolean };
 
 export const AdminCoupons: React.FC = () => {
   const { siteId } = useStore();
+  const {store}=useConnect();
+  const allowed=Boolean(store?.id===siteId&&['owner','admin'].includes(store.role));
+  const [planAllowed,setPlanAllowed]=useState<boolean|null>(null);
+  useEffect(()=>{let active=true;setPlanAllowed(null);void loadPremiumFeatures(siteId).then(value=>{if(active)setPlanAllowed(value?.coupons??null);}).catch(()=>{if(active)setPlanAllowed(false);});return()=>{active=false;};},[siteId,store?.plan_code]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [code, setCode] = useState('');
   const [kind, setKind] = useState<'percent'|'fixed'>('percent');
@@ -19,7 +25,7 @@ export const AdminCoupons: React.FC = () => {
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    if (!siteId) return;
+    if (!siteId||!allowed||planAllowed===false) return;
     let active = true;
     requireSupabase().from('delivery_coupons').select('*').eq('store_id', siteId).order('created_at', { ascending: false })
       .then(({ data, error }) => {
@@ -28,9 +34,10 @@ export const AdminCoupons: React.FC = () => {
         else setCoupons((data || []) as Coupon[]);
       });
     return () => { active = false; };
-  }, [siteId, refresh]);
+  }, [siteId, refresh,allowed,planAllowed]);
 
   const createCoupon = async (e: React.FormEvent) => {
+    if(!allowed||planAllowed===false){e.preventDefault();return;}
     e.preventDefault(); setError(''); setSaving(true);
     try {
       const normalized = code.trim().toUpperCase();
@@ -53,6 +60,7 @@ export const AdminCoupons: React.FC = () => {
   };
 
   const toggleCoupon = async (coupon: Coupon) => {
+    if(!allowed||planAllowed===false)return;
     setError('');
     const { error } = await requireSupabase().from('delivery_coupons').update({ active: !coupon.active })
       .eq('store_id', siteId).eq('code', coupon.code);
@@ -62,9 +70,11 @@ export const AdminCoupons: React.FC = () => {
 
   const couponStatus = (c: Coupon) => !c.active ? 'Pausado' : c.expires_at && new Date(c.expires_at).getTime() < Date.now() ? 'Expirado' : c.max_uses !== null && c.used_count >= c.max_uses ? 'Esgotado' : c.starts_at && new Date(c.starts_at).getTime() > Date.now() ? 'Programado' : 'Ativo';
 
+  if(!allowed)return <p role="status">Somente o proprietário ou administrador autorizado pode gerenciar cupons.</p>;
+  if(planAllowed===false)return <p role="status">Cupons indisponíveis neste plano ou estado da loja. Consulte o Master sobre os recursos Premium.</p>;
   return <section className="space-y-5 text-white">
     <header><h1 className="text-2xl font-black">Central de cupons</h1>
-      <p className="text-sm text-neutral-400">Cadastre e gerencie cupons exclusivos desta loja. A aplicação no checkout será liberada após a validação de descontos no servidor.</p></header>
+      <p className="text-sm text-neutral-400">Gerencie cupons exclusivos desta loja. Os descontos são validados pelo servidor, sem reduzir a taxa de entrega.</p></header>
     {error && <p role="alert" className="rounded-xl bg-red-950 border border-red-800 p-3">{error}</p>}
     <form onSubmit={createCoupon} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 grid gap-3 sm:grid-cols-2">
       <label className="text-sm">Código<input required value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="BEMVINDO10" className="mt-1 w-full rounded-xl bg-neutral-950 p-3 border border-neutral-700" /></label>

@@ -11,12 +11,12 @@ export function OrderStageBoard({ orders, search, now, list=false, busyIds=[], c
   busyIds?:string[];connected?:boolean;onAdvance?:(order:Order,status:OrderStatus)=>void;
   onDetails:(order:Order)=>void; onWhatsApp:(order:Order)=>void;
 }) {
-  const pending=pendingOrderQueue(orders);
+  const pending=pendingOrderQueue(orders, now);
   const [limits,setLimits]=useState<Record<string,number>>({});
   return <section className={`order-kanban-board ${list?'is-list':''}`} aria-label="Visão geral de pedidos por etapa">
     {ORDER_STAGES.map(stage=>{
       const Icon=STATUS_ICONS[stage.id];
-      const stageOrders=selectOrders(orders,stage.id,search);
+      const stageOrders=selectOrders(orders,stage.id,search,now);
       // Receiving is handled exclusively in its queue; this column is a preview.
       const limit=limits[stage.id]??ORDER_PAGE_SIZE;
       const cards=stage.id==='recebido'?pending.slice(0,1).filter(order=>!search.trim()||stageOrders.some(match=>match.id===order.id)):stageOrders.slice(0,limit);
@@ -29,7 +29,7 @@ export function OrderStageBoard({ orders, search, now, list=false, busyIds=[], c
           {!['entregue','cancelado'].includes(stage.id)&&<ul className="kanban-items">{order.items.map((item,index)=><li key={`${item.productId}:${index}`}><b>{item.quantity}×</b><span>{item.name}</span></li>)}</ul>}
           <div className="kanban-total"><span>{order.items.reduce((count,item)=>count+item.quantity,0)} itens</span><strong>{formatBRL(order.total)}</strong></div>
           <div className="kanban-card-actions">
-            {onAdvance&&<OrderAdvanceButton order={order} busy={busyIds.includes(order.id)} disabled={!connected} onAdvance={status=>onAdvance(order,status)}/>}
+            {onAdvance&&<OrderAdvanceButton order={order} now={now} busy={busyIds.includes(order.id)} disabled={!connected} onAdvance={status=>onAdvance(order,status)}/>}
             <button className="kanban-open-order" onClick={()=>stage.id==='recebido'?onOpenStage('recebido'):onDetails(order)}>{stage.id==='recebido'?<ArrowRight size={14}/>:<Eye size={14}/>} {stage.id==='recebido'?'Atender fila':'Ver pedido'}</button>
           </div>
         </article>)}

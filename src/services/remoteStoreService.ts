@@ -4,9 +4,11 @@ import type { Category, Product, SiteSettings, Order, Customer, ManualPayment, O
 import { DEFAULT_SITE_SETTINGS, DEFAULT_STORE_ADMIN, INITIAL_CATEGORIES, INITIAL_PRODUCTS, DEFAULT_SITE_ID } from './storeDefaults';
 import { readLocal } from '../lib/localStore';
 import type { OfficialStore } from './connectService';
+import { queueAcceptedOrder, flushAcceptedOrders } from './orderReportingService';
 
 export let connectedStore: OfficialStore | null = null;
-export function setConnectedStore(value: OfficialStore | null) { connectedStore = value; }
+export let connectedStoreOperational = false;
+export function setConnectedStore(value: OfficialStore | null, operational = value?.status === 'active') { connectedStore = value; connectedStoreOperational = Boolean(value && operational); }
 export const isOfficialId = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const change = 'delivery-remote-change';
 export function dataError(error: unknown) {
@@ -34,7 +36,7 @@ export function subscribeRemote<T>(siteId:string, table:string, fetcher:()=>Prom
 const publicSettingsKeys=['name','slug','phone','address','openingHours','autoHoursEnabled','weeklySchedule','deliveryFee','isOpen','logoUrl','bannerUrl','customerNotice','customerNoticeEnabled','upsellEnabled','upsellProductIds','primaryColor','acceptedPaymentMethods','pixKey','pixKeyType'] as const;
 export function publicSettings(settings:Partial<SiteSettings>) { return Object.fromEntries(publicSettingsKeys.filter(key=>settings[key]!==undefined).map(key=>[key,settings[key]])); }
 export async function initializeRemoteCatalog(siteId:string) {
-  if (!connectedStore || connectedStore.id!==siteId || !['owner','admin'].includes(connectedStore.role)) return;
+  if (!connectedStoreOperational || !connectedStore || connectedStore.id!==siteId || !['owner','admin'].includes(connectedStore.role)) return;
   const client=requireSupabase();
   const marker=`novaesweb:catalog-imported:${siteId}`;
   if(localStorage.getItem(marker)==='yes')return;
@@ -63,19 +65,18 @@ export function subscribeRemoteAvailability(siteId:string,onData:(value:StoreAva
     if(!active||fetching)return;fetching=true;
     try{
       const {data,error}=await requireSupabase().rpc('delivery_public_availability',{p_store_id:siteId});
-      // During a phased deployment, preserve the store's existing behavior
-      // until the Master migration is available in the connected project.
-      if(error?.code==='PGRST202')return;
       assertResult(error);
       const row=Array.isArray(data)?data[0]:data;
       if(!row)throw new Error('A disponibilidade desta loja não foi encontrada.');
-      if(active)onData({status:row.status||'active',blockMode:row.block_mode,message:row.block_message,returnAt:row.block_until});
-    }catch(error){if(active)dataError(error);}finally{fetching=false;}
+      if(active)onData({status:row.status||'unavailable',blockMode:row.block_mode,message:row.block_message,returnAt:row.block_until});
+    }catch(error){if(active){onData({status:'unavailable',message:'Não foi possível confirmar a disponibilidade da loja. Tente novamente em instantes.'});dataError(error);}}finally{fetching=false;}
   };
   const onVisible=()=>{if(document.visibilityState==='visible')void refresh();};
   document.addEventListener('visibilitychange',onVisible);
-  const timer=window.setInterval(onVisible,15_000);void refresh();
-  return()=>{active=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
+  const client=requireSupabase();
+  const channel=client.channel(`availability:${siteId}:${crypto.randomUUID()}`).on('postgres_changes',{event:'*',schema:'public',table:'managed_sites',filter:`id=eq.${siteId}`},onVisible).subscribe();
+  const timer=window.setInterval(onVisible,60_000);void refresh();
+  return()=>{active=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);void client.removeChannel(channel);};
 }
 export async function updateRemoteSettings(siteId:string,settings:Partial<SiteSettings>) {
   const client=requireSupabase();const {data,error}=await client.from('delivery_settings').select('payload').eq('store_id',siteId).single();assertResult(error);
@@ -101,9 +102,11 @@ export async function deleteRemoteProduct(siteId:string,id:string){const {error}
 type GuestOrder={id:string;token:string};
 function guestOrders(siteId:string):GuestOrder[]{try{return JSON.parse(localStorage.getItem(`delivery:order-access:${siteId}`)||'[]');}catch{return [];}}
 function mapOrder(row:Record<string,any>):Order{return {...row.payload,id:row.id,siteId:row.store_id,orderNumber:Number(row.order_number),total:Number(row.total_cents)/100,status:row.status,isPaid:row.is_paid,paymentStatus:row.is_paid?'paid':'pending',createdAt:row.created_at,updatedAt:row.updated_at};}
-export function subscribeRemoteOrders(siteId:string,onData:(value:Order[])=>void){return subscribeRemote(siteId,'delivery_orders',async()=>{
+export function subscribeRemoteOrders(siteId:string,onData:(value:Order[])=>void){
+  if(connectedStore?.id===siteId&&!connectedStoreOperational){onData([]);return()=>{};}
+  return subscribeRemote(siteId,'delivery_orders',async()=>{
   const client=requireSupabase();
-  if(connectedStore?.id===siteId){const {data,error}=await client.from('delivery_orders').select('*').eq('store_id',siteId).order('created_at',{ascending:false});assertResult(error);return(data||[]).map(mapOrder);}
+  if(connectedStore?.id===siteId){if(!connectedStoreOperational)return[];const {data,error}=await client.from('delivery_orders').select('*').eq('store_id',siteId).order('created_at',{ascending:false});assertResult(error);return(data||[]).map(mapOrder);}
   const list:Order[]=[];
   for(const access of guestOrders(siteId).slice(0,50)){
     const {data,error}=await client.rpc('delivery_track_order',{p_store_id:siteId,p_order_id:access.id,p_access_token:access.token});
@@ -118,7 +121,7 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
   try{saved=JSON.parse(localStorage.getItem(attemptKey)||'null');}catch{}
   const attempt=saved?.request===serialized?saved:{request:serialized,key:crypto.randomUUID(),token:Array.from(crypto.getRandomValues(new Uint8Array(32)),byte=>byte.toString(16).padStart(2,'0')).join('')};
   localStorage.setItem(attemptKey,JSON.stringify(attempt));
-  const {data,error}=await requireSupabase().rpc('delivery_place_order',{p_store_id:siteId,p_request:request,p_idempotency_key:attempt.key,p_access_token:attempt.token});
+  const {data,error}=await requireSupabase().rpc(order.scheduledFor?'delivery_place_scheduled_order':'delivery_place_order',{p_store_id:siteId,p_request:request,p_idempotency_key:attempt.key,p_access_token:attempt.token});
   if(error){const messages:Record<string,string>={
     STORE_UNAVAILABLE:'A loja está indisponível.',
     STORE_CLOSED:'A loja está fechada no momento.',
@@ -137,6 +140,13 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
     INVALID_PHONE:'Informe um telefone com DDD e número.',
     INVALID_ADDRESS_OR_NOTES:'Complete rua, número e bairro para a entrega.',
     INVALID_ITEMS:'Adicione pelo menos um item ao carrinho.',
+    SCHEDULING_UNAVAILABLE:'O agendamento não está disponível para esta loja.',
+    INVALID_SCHEDULE:'Escolha novamente um horário disponível para o agendamento.',
+    SCHEDULE_TOO_SOON:'O horário escolhido está muito próximo. Escolha outro horário.',
+    SCHEDULE_OUTSIDE_HOURS:'O horário escolhido está fora do atendimento da loja.',
+    SCHEDULE_NOT_DUE:'Este pedido ainda não chegou ao horário de preparo.',
+    SCHEDULE_UNAVAILABLE:'O horário escolhido não está mais disponível. Escolha outro horário.',
+    INVALID_FULFILLMENT_MODE:'Escolha uma opção de entrega ou retirada disponível.',
     INVALID_QUANTITY:'A quantidade de um item não é válida.',
     ORDER_TOO_LARGE:'O pedido ultrapassa o limite permitido. Reduza as quantidades e tente novamente.',
   };throw new Error(messages[error.message]||'Não foi possível confirmar o pedido. Confira os dados e tente novamente.');}
@@ -146,21 +156,38 @@ export async function createRemoteOrder(siteId:string,order:Omit<Order,'id'|'ord
   localStorage.removeItem(attemptKey);notify();return result;
 }
 export async function updateRemoteOrder(siteId:string,id:string,changes:{status?:string;is_paid?:boolean},expectedStatus?:string){
+  if(connectedStore?.id!==siteId||!connectedStoreOperational)throw new Error('A operação da loja não está autorizada neste momento.');
+  const acceptance = expectedStatus === 'recebido' && changes.status === 'preparando' && ['owner','admin'].includes(connectedStore.role) && ['NOVAES_BUSINESS','NOVAES_PREMIUM','NOVAES_EMPRESARIAL'].includes(connectedStore.plan_code || '');
+  const reportingPlan = connectedStore.plan_code;
+  // Session lookup is local; reporting must not introduce a network prerequisite
+  // before the conditional order UPDATE. The database still authorizes it.
+  const actor = acceptance ? await requireSupabase().auth.getSession().catch(()=>null) : null;
   let query=requireSupabase().from('delivery_orders').update(changes).eq('store_id',siteId).eq('id',id);
   // The database checks this predicate atomically: only one staff member can
   // move an order from the status they actually saw. Payment updates are unchanged.
   if(expectedStatus!==undefined)query=query.eq('status',expectedStatus);
-  const {data,error}=await query.select('id').maybeSingle();
+  const {data,error}=await query.select('id,updated_at').maybeSingle();
   if(error){notify();assertResult(error);}
   if(!data){notify();throw new Error('Este pedido já foi atualizado por outro funcionário ou não está mais disponível. Aguarde a atualização da fila.');}
+  if(acceptance){
+    queueAcceptedOrder(siteId,actor?.data.session?.user.id || '',reportingPlan,id,data.updated_at);
+    if(actor?.data.session?.user.id)void flushAcceptedOrders(siteId,actor.data.session.user.id);
+  }
+  if(expectedStatus==='recebido' && changes.status==='preparando' && !['owner','admin'].includes(connectedStore?.role || '') && ['NOVAES_BUSINESS','NOVAES_PREMIUM','NOVAES_EMPRESARIAL'].includes(reportingPlan || '')){
+    dataError(new Error('Pedido aceito. A contagem central exige proprietário/administrador e ainda não autoriza aceite por funcionário. Solicite revisão técnica; não aceite o pedido novamente.'));
+  }
   notify();
 }
 export async function reviewRemoteOrder(siteId:string,id:string,review:OrderReview){const access=guestOrders(siteId).find(item=>item.id===id);if(!access)throw new Error('Este navegador não tem acesso a esse pedido.');const{error}=await requireSupabase().rpc('delivery_review_order',{p_store_id:siteId,p_order_id:id,p_access_token:access.token,p_review:review});assertResult(error);notify();}
-export function subscribeRemoteCustomers(siteId:string,onData:(value:Customer[])=>void){return subscribeRemote(siteId,'delivery_customers',async()=>{
-  if(connectedStore?.id!==siteId)return[];const{data,error}=await requireSupabase().from('delivery_customers').select('id,payload,created_at').eq('store_id',siteId);assertResult(error);return(data||[]).map(row=>({...row.payload,id:row.id,siteId,createdAt:row.created_at} as Customer));
+export function subscribeRemoteCustomers(siteId:string,onData:(value:Customer[])=>void){
+  if(!connectedStoreOperational){onData([]);return()=>{};}
+  return subscribeRemote(siteId,'delivery_customers',async()=>{
+  if(connectedStore?.id!==siteId||!connectedStoreOperational)return[];const{data,error}=await requireSupabase().from('delivery_customers').select('id,payload,created_at').eq('store_id',siteId);assertResult(error);return(data||[]).map(row=>({...row.payload,id:row.id,siteId,createdAt:row.created_at} as Customer));
 },onData);}
-export function subscribeRemotePayments(siteId:string,onData:(value:ManualPayment[])=>void){return subscribeRemote(siteId,'delivery_manual_payments',async()=>{
-  if(connectedStore?.id!==siteId||!['owner','admin'].includes(connectedStore.role))return[];const{data,error}=await requireSupabase().from('delivery_manual_payments').select('id,payload,created_at').eq('store_id',siteId);assertResult(error);return(data||[]).map(row=>({...row.payload,id:row.id,siteId,createdAt:row.created_at} as ManualPayment));
+export function subscribeRemotePayments(siteId:string,onData:(value:ManualPayment[])=>void){
+  if(!connectedStoreOperational){onData([]);return()=>{};}
+  return subscribeRemote(siteId,'delivery_manual_payments',async()=>{
+  if(connectedStore?.id!==siteId||!connectedStoreOperational||!['owner','admin'].includes(connectedStore.role))return[];const{data,error}=await requireSupabase().from('delivery_manual_payments').select('id,payload,created_at').eq('store_id',siteId);assertResult(error);return(data||[]).map(row=>({...row.payload,id:row.id,siteId,createdAt:row.created_at} as ManualPayment));
 },onData);}
 export async function addRemotePayment(siteId:string,payment:Omit<ManualPayment,'id'|'createdAt'>){const id=crypto.randomUUID();const{data,error}=await requireSupabase().from('delivery_manual_payments').insert({store_id:siteId,id,payload:withoutSite({...payment,siteId})}).select('id,created_at').single();assertResult(error);notify();return{...payment,siteId,id,createdAt:data!.created_at};}
 export async function deleteRemotePayment(siteId:string,id:string){const{error}=await requireSupabase().from('delivery_manual_payments').delete().eq('store_id',siteId).eq('id',id).select('id').single();assertResult(error);notify();}

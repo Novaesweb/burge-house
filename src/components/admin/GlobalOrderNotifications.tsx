@@ -6,12 +6,14 @@ import {
   muteOrderSoundTemporarily, ORDER_SOUND_EVENT, setOrderSoundMuted,
   startOrderAlertLoop, stopOrderAlertLoop, unlockAudio,
 } from '../../utils/audioAlert';
-import { newUnseenOrderIds, normalizeOrderStatus, ordersForStore, orderStageUrl } from '../../utils/adminOrders';
+import { newUnseenOrderIds, pendingOrderQueue, ordersForStore, orderStageUrl } from '../../utils/adminOrders';
 
 export const GlobalOrderNotifications: React.FC = () => {
   const { orders: allOrders, siteId, setAdminView, setSelectedAdminOrder } = useStore();
   const orders = useMemo(() => ordersForStore(allOrders, siteId), [allOrders, siteId]);
-  const pendingCount = orders.filter(order => normalizeOrderStatus(order.status) === 'recebido').length;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
+  const pendingCount = pendingOrderQueue(orders, now).length;
   const [audioState, setAudioState] = useState(() => ({
     ready: getAudioContextState() === 'running',
     muted: isOrderSoundMuted(),
@@ -66,7 +68,7 @@ export const GlobalOrderNotifications: React.FC = () => {
       } catch {}
       seenRef.current = { site: siteId, ids: new Set(ids) };
     }
-    const ids = newUnseenOrderIds(orders, seenRef.current.ids);
+    const ids = newUnseenOrderIds(orders, seenRef.current.ids, now);
     if (!ids.length) return;
     ids.forEach(id => seenRef.current.ids.add(id));
     try { sessionStorage.setItem(`admin-notified:${siteId}`, JSON.stringify([...seenRef.current.ids].slice(-2000))); } catch {}
@@ -79,7 +81,7 @@ export const GlobalOrderNotifications: React.FC = () => {
         });
       } catch {}
     }
-  }, [orders, siteId, openQueue]);
+  }, [orders, siteId, openQueue, now]);
 
   const enableSound = async () => {
     const ready = await unlockAudio();

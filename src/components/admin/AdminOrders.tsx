@@ -10,7 +10,8 @@ import { OrderStageBoard } from './OrderStageBoard';
 import { ORDER_PAGE_SIZE, OrderListControls } from './OrderListControls';
 import { isOrderSoundMuted, playUrgentOrderSound, playSuccessSound } from '../../utils/audioAlert';
 import { formatBRL } from '../../utils/formatters';
-import { ORDER_STAGES, nextOrderAction, normalizeOrderStatus, orderCounts, ordersForStore, selectOrders, whatsappNumber, orderStageFromUrl, orderStageUrl, type OrderStageView } from '../../utils/adminOrders';
+import { ORDER_STAGES, isOrderReadyForAttention, isWaitingScheduledOrder, nextOrderAction, normalizeOrderStatus, orderCounts, ordersForStore, selectOrders, whatsappNumber, orderStageFromUrl, orderStageUrl, type OrderStageView } from '../../utils/adminOrders';
+import { formatScheduledTime } from '../../utils/scheduling';
 
 export const AdminOrders: React.FC = () => {
   const {orders:allOrders,siteId,changeOrderStatus,toggleOrderPaymentAction,siteSettings,selectedAdminOrder,setSelectedAdminOrder}=useStore();
@@ -71,15 +72,16 @@ export const AdminOrders: React.FC = () => {
   },[!!selectedOrder]);
   const normalizeStatus=normalizeOrderStatus;
   const allStatuses=ORDER_STAGES.map(stage=>({...stage,color:`order-modal-status tone-${stage.tone}`}));
-  const counts=orderCounts(orders);
-  const filteredOrders=selectOrders(orders,selectedStatusFilter,searchQuery);
+  const counts=orderCounts(orders,currentTime);
+  const scheduledCount=orders.filter(order=>isWaitingScheduledOrder(order,currentTime)).length;
+  const filteredOrders=selectOrders(orders,selectedStatusFilter,searchQuery,currentTime);
   const selectedStage=ORDER_STAGES.find(stage=>stage.id===selectedStatusFilter);
-  const stageLabel=selectedStage?.label||'Visão geral';
+  const stageLabel=selectedStatusFilter==='agendados'?'Agendados':selectedStage?.label||'Visão geral';
   const stageTone=selectedStage?.tone||'gray';
-  const stageCount=selectedStage?counts[selectedStage.id]:orders.length;
+  const stageCount=selectedStatusFilter==='agendados'?scheduledCount:selectedStage?counts[selectedStage.id]:orders.length-scheduledCount;
   const nextAttention=selectedStatusFilter==='recebido'||selectedStatusFilter==='todos'?undefined:filteredOrders.find(order=>!['entregue','cancelado'].includes(normalizeStatus(order.status)));
   const showReceiving=selectedStatusFilter==='recebido';
-  const stageOrders=filteredOrders.filter(order=>normalizeStatus(order.status)!=='recebido');
+  const stageOrders=selectedStatusFilter==='agendados'?filteredOrders:filteredOrders.filter(order=>normalizeStatus(order.status)!=='recebido');
   const getElapsedMinutes=(createdAt:string)=>Math.max(0,Math.floor((currentTime-new Date(createdAt).getTime())/60000)||0);
   const getStatusBadge=(status:OrderStatus)=><OrderStatusBadge status={status}/>;
   const perform=async(orderId:string,operation:()=>Promise<void>)=>{
@@ -91,6 +93,7 @@ export const AdminOrders: React.FC = () => {
   const handleStatusChange=(orderId:string,status:OrderStatus)=>perform(orderId,async()=>{
     const target=orders.find(order=>order.id===orderId);
     if(!online||!ordersConnected)throw new Error('Sem conexão com os pedidos. Nenhuma alteração foi confirmada.');
+    if(target && status !== 'cancelado' && target.status === 'recebido' && !isOrderReadyForAttention(target,currentTime))throw new Error('Este pedido está agendado. Aguarde o horário de preparo para aceitar.');
     if(target?.status==='recebido'&&!['preparando','cancelado'].includes(status))throw new Error('Aceite ou recuse o pedido antes de continuar o atendimento.');
     await changeOrderStatus(orderId,status);
     if(target?.status==='recebido')setSelectedOrder(current=>current?.id===orderId?null:current);
@@ -125,11 +128,11 @@ export const AdminOrders: React.FC = () => {
   return <div className="orders-workbench">
     <header className="orders-page-heading"><div><span className="workspace-eyebrow">OPERAÇÃO DA LOJA</span><h1>Pedidos <span className="live-indicator"><i/>Atualização automática</span></h1><p>Escolha uma etapa para acompanhar somente os pedidos daquele status.</p></div><div className="orders-tools"><button className={`order-tool ${autoPrintOnAccept?'is-enabled':''}`} aria-pressed={autoPrintOnAccept} onClick={()=>{const next=!autoPrintOnAccept;setAutoPrintOnAccept(next);localStorage.setItem(`auto_print_on_accept:${siteId}`,String(next));}}><Printer size={16}/>Comanda automática <span>{autoPrintOnAccept?'Ativa':'Inativa'}</span></button><button className="order-tool" onClick={()=>playUrgentOrderSound()}><Volume2 size={16}/>Testar som</button></div></header>
     <nav className="order-stage-navigation" aria-label="Etapas dos pedidos">
-      {[{id:'todos' as const,label:'Visão geral',tone:'gray',count:orders.length},...ORDER_STAGES.map(stage=>({...stage,count:counts[stage.id]}))].map(stage=><a key={stage.id} href={orderStageUrl(window.location.href,stage.id)} className={`order-stage-link tone-${stage.tone} ${selectedStatusFilter===stage.id?'is-selected':''}`} aria-current={selectedStatusFilter===stage.id?'page':undefined} onClick={event=>{if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();selectStage(stage.id);}}><span className="order-stage-name"><i/>{stage.label}</span><strong aria-label={`${stage.count} pedidos`}>{stage.count}</strong><span className="order-stage-action">{selectedStatusFilter===stage.id?'Etapa aberta':'Abrir etapa'}<ArrowRight size={13}/></span></a>)}
+      {[{id:'todos' as const,label:'Visão geral',tone:'gray',count:orders.length-scheduledCount},{id:'agendados' as const,label:'Agendados',tone:'purple',count:scheduledCount},...ORDER_STAGES.map(stage=>({...stage,count:counts[stage.id]}))].map(stage=><a key={stage.id} href={orderStageUrl(window.location.href,stage.id)} className={`order-stage-link tone-${stage.tone} ${selectedStatusFilter===stage.id?'is-selected':''}`} aria-current={selectedStatusFilter===stage.id?'page':undefined} onClick={event=>{if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();selectStage(stage.id);}}><span className="order-stage-name"><i/>{stage.label}</span><strong aria-label={`${stage.count} pedidos`}>{stage.count}</strong><span className="order-stage-action">{selectedStatusFilter===stage.id?'Etapa aberta':'Abrir etapa'}<ArrowRight size={13}/></span></a>)}
     </nav>
     <section className={`order-stage-page tone-${stageTone}`} aria-labelledby="order-stage-title">
       <header className="order-stage-page-heading"><div><span className="order-stage-kicker">PEDIDOS / {selectedStatusFilter==='todos'?'TODAS AS ETAPAS':'ETAPA SELECIONADA'}</span><h2 id="order-stage-title">{stageLabel}<span>{stageCount}</span></h2><p>{selectedStatusFilter==='todos'?'Todos os pedidos da loja, reunidos nesta visão geral.':`Somente pedidos em “${stageLabel}”. Ao avançar, eles seguem para a próxima etapa.`}</p></div></header>
-      {nextAttention&&<div className="order-attention"><span><span className="attention-dot"/><strong>Próximo atendimento nesta etapa</strong> <span>#{nextAttention.orderNumber} · {nextAttention.customerName}</span></span><div className="order-attention-actions"><OrderAdvanceButton order={nextAttention} busy={busyIds.includes(nextAttention.id)} disabled={!online||!ordersConnected} onAdvance={status=>void handleStatusChange(nextAttention.id,status)}/><button onClick={()=>setSelectedOrder(nextAttention)}>Ver detalhes</button></div></div>}
+      {nextAttention&&<div className="order-attention"><span><span className="attention-dot"/><strong>Próximo atendimento nesta etapa</strong> <span>#{nextAttention.orderNumber} · {nextAttention.customerName}</span></span><div className="order-attention-actions"><OrderAdvanceButton order={nextAttention} now={currentTime} busy={busyIds.includes(nextAttention.id)} disabled={!online||!ordersConnected} onAdvance={status=>void handleStatusChange(nextAttention.id,status)}/><button onClick={()=>setSelectedOrder(nextAttention)}>Ver detalhes</button></div></div>}
       {error&&<div className="order-error" role="alert">{error}<button aria-label="Fechar erro" onClick={()=>setError('')}><X size={16}/></button></div>}
       <section className="orders-control-panel" aria-label={`Pesquisa em ${stageLabel}`}><div className="orders-search-row"><label className="order-search"><Search size={18}/><span className="sr-only">Buscar pedido, cliente ou telefone nesta etapa</span><input value={searchQuery} onChange={event=>{setSearchQuery(event.target.value);setStageLimit(ORDER_PAGE_SIZE);}} placeholder="Buscar nesta etapa: pedido, cliente ou telefone"/>{searchQuery&&<button aria-label="Limpar busca" onClick={()=>setSearchQuery('')}><X size={16}/></button>}</label><span className="order-results" aria-live="polite">{filteredOrders.length} {filteredOrders.length===1?'pedido':'pedidos'} nesta visualização</span>{selectedStatusFilter!=='recebido'&&<div className="order-view-toggle" role="group" aria-label="Visualização"><button aria-label="Visualização em cartões" aria-pressed={viewMode==='cards'} className={viewMode==='cards'?'is-selected':''} onClick={()=>changeView('cards')}><LayoutGrid size={17}/><span>{selectedStatusFilter==='todos'?'Kanban':'Cartões'}</span></button><button aria-label="Visualização em lista" aria-pressed={viewMode==='list'} className={viewMode==='list'?'is-selected':''} onClick={()=>changeView('list')}><List size={18}/><span>Lista</span></button></div>}</div></section>
       {showReceiving&&<NewOrderQueue key={`${siteId}:${searchQuery}`} orders={orders} now={currentTime} busyIds={busyIds} search={searchQuery} connected={online&&ordersConnected} onAccept={order=>void handleStatusChange(order.id,'preparando')} onReject={refuseOrder} onDetails={setSelectedOrder} onPrint={setReceiptOrder} onWhatsApp={openWhatsAppCustomer}/>}
@@ -180,6 +183,7 @@ export const AdminOrders: React.FC = () => {
               </div>
             </div>
 
+            {selectedOrder.scheduledFor && <p className="rounded-xl border border-violet-700 p-3 text-violet-200">Agendado: {Number.isFinite(Date.parse(selectedOrder.scheduledFor)) ? formatScheduledTime(selectedOrder.scheduledFor) : "Horário indisponível"} (Brasília) · {selectedOrder.fulfillmentMode === "pickup" ? "Retirada na loja" : "Entrega"}</p>}
             {/* Status Flow Buttons */}
             <div className="p-4 rounded-2xl bg-black border border-neutral-800 space-y-3">
               <span className="text-xs font-black text-neutral-300 block uppercase tracking-wider">
@@ -191,7 +195,7 @@ export const AdminOrders: React.FC = () => {
                   .map((s) => (
                     <button
                       key={s.id}
-                      disabled={busyIds.includes(selectedOrder.id)||!online||!ordersConnected||(selectedOrder.status==='recebido'&&s.id!=='preparando')}
+                      disabled={busyIds.includes(selectedOrder.id)||!online||!ordersConnected||!isOrderReadyForAttention(selectedOrder,currentTime)||(selectedOrder.status==='recebido'&&s.id!=='preparando')}
                       onClick={() => {
                         handleStatusChange(selectedOrder.id, s.id);
                       }}

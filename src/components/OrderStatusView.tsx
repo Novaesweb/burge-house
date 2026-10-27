@@ -21,6 +21,8 @@ import { formatBRL } from '../utils/formatters';
 import { PixWhatsAppProofCard } from './PixWhatsAppProofCard';
 import { OrderRatingCard } from './OrderRatingCard';
 import { MarketingConsent } from './MarketingConsent';
+import { formatOrderAddress } from '../utils/adminOrders';
+import { formatScheduledTime } from '../utils/scheduling';
 
 export const OrderStatusView: React.FC = () => {
   const {
@@ -94,6 +96,8 @@ export const OrderStatusView: React.FC = () => {
   const isCancelled = order.status === 'cancelado';
   const isDelivered = order.status === 'entregue';
   const isOutForDelivery = order.status === 'saiu_para_entrega';
+  const scheduledTime = order.scheduledFor && Number.isFinite(Date.parse(order.scheduledFor))
+    ? formatScheduledTime(order.scheduledFor) : null;
 
   const formatTime = (isoString?: string) => {
     if (!isoString) return 'Hoje';
@@ -216,7 +220,9 @@ export const OrderStatusView: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-neutral-300 leading-relaxed font-medium">
-            Seu pedido foi enviado para o restaurante. O estabelecimento foi notificado e irá aceitar a qualquer momento para iniciar o preparo na cozinha.
+            {scheduledTime
+              ? 'Seu pedido foi agendado. A loja poderá aceitar ao chegar o horário de iniciar o preparo.'
+              : 'Seu pedido foi enviado para o restaurante. O estabelecimento foi notificado e irá aceitar para iniciar o preparo na cozinha.'}
           </p>
         </div>
       )}
@@ -234,11 +240,11 @@ export const OrderStatusView: React.FC = () => {
         <div className="w-px h-8 bg-neutral-800" />
         <div>
           <span className="text-xs font-bold text-neutral-400 block uppercase tracking-wider">
-            Previsão
+            {scheduledTime && !isDelivered && !isCancelled ? 'Agendado (Brasília)' : 'Previsão'}
           </span>
           <span className="text-lg font-black text-white flex items-center justify-center gap-1.5">
             <Clock className="w-4 h-4 text-red-500" />
-            {isDelivered ? 'Entregue' : isCancelled ? 'Cancelado' : `${order.estimatedMinutes || 40} min`}
+            {isDelivered ? 'Entregue' : isCancelled ? 'Cancelado' : scheduledTime || `${order.estimatedMinutes || 40} min`}
           </span>
         </div>
       </div>
@@ -385,9 +391,7 @@ export const OrderStatusView: React.FC = () => {
             <div className="p-3 rounded-2xl bg-black/70 border border-neutral-800 text-xs text-neutral-300 flex items-start gap-2">
               <MapPin className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
               <span>
-                {typeof order.deliveryAddress === 'object' && order.deliveryAddress !== null
-                  ? `${order.deliveryAddress.street}, ${order.deliveryAddress.number} (${order.deliveryAddress.neighborhood})`
-                  : order.deliveryAddress}
+                {formatOrderAddress(order)}
               </span>
             </div>
           </div>

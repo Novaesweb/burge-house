@@ -12,11 +12,23 @@ export const ORDER_STAGES = [
   {id:'cancelado',label:'Cancelados',short:'Cancelado',tone:'gray'},
 ] as const;
 
-export type OrderStageView = 'todos' | typeof ORDER_STAGES[number]['id'];
+export type OrderStageView = 'todos' | 'agendados' | typeof ORDER_STAGES[number]['id'];
+
+/** Display timing only. The server must separately authorize accepting a schedule. */
+export function isOrderReadyForAttention(order: Order, now = Date.now()) {
+  if (!order.scheduledFor) return true;
+  const scheduledAt = Date.parse(order.scheduledFor);
+  if (!Number.isFinite(scheduledAt)) return false;
+  return now >= scheduledAt - (order.preparationMinutes ?? 30) * 60000;
+}
+
+export function isWaitingScheduledOrder(order: Order, now = Date.now()) {
+  return normalizeOrderStatus(order.status) === 'recebido' && !isOrderReadyForAttention(order, now);
+}
 
 export function orderStageFromUrl(href: string): OrderStageView | null {
   const stage = new URL(href).searchParams.get('etapa');
-  return stage === 'todos' || ORDER_STAGES.some(item => item.id === stage) ? stage as OrderStageView : null;
+  return stage === 'todos' || stage === 'agendados' || ORDER_STAGES.some(item => item.id === stage) ? stage as OrderStageView : null;
 }
 
 export function orderStageUrl(href: string, stage: OrderStageView): string {
@@ -35,19 +47,19 @@ export function nextOrderAction(status:string) {
   const stage=orderStage(status);
   return stage && 'next' in stage ? {status:stage.next as OrderStatus,label:stage.action} : null;
 }
-export function pendingOrderQueue(orders:Order[]) {
-  return orders.filter(order=>normalizeOrderStatus(order.status)==='recebido').sort((a,b)=>
+export function pendingOrderQueue(orders:Order[], now = Date.now()) {
+  return orders.filter(order=>normalizeOrderStatus(order.status)==='recebido' && isOrderReadyForAttention(order, now)).sort((a,b)=>
     new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime()||String(a.id).localeCompare(String(b.id))
   );
 }
-export function orderCounts(orders:Order[]) {
-  return Object.fromEntries(ORDER_STAGES.map(stage=>[stage.id,orders.filter(order=>normalizeOrderStatus(order.status)===stage.id).length])) as Record<OrderStatus,number>;
+export function orderCounts(orders:Order[], now = Date.now()) {
+  return Object.fromEntries(ORDER_STAGES.map(stage=>[stage.id,orders.filter(order=>normalizeOrderStatus(order.status)===stage.id && !isWaitingScheduledOrder(order, now)).length])) as Record<OrderStatus,number>;
 }
-export function selectOrders(orders:Order[],status:string,search:string) {
+export function selectOrders(orders:Order[],status:string,search:string,now = Date.now()) {
   const term=search.trim().toLocaleLowerCase('pt-BR');
   const digits=term.replace(/\D/g,'');
   return orders.filter(order=>
-    (status==='todos'||normalizeOrderStatus(order.status)===status) &&
+    (status==='agendados' ? isWaitingScheduledOrder(order, now) : !isWaitingScheduledOrder(order, now) && (status==='todos'||normalizeOrderStatus(order.status)===status)) &&
     (!term||String(order.orderNumber).includes(term.replace(/^#/,''))||order.customerName?.toLocaleLowerCase('pt-BR').includes(term)||
       (digits.length>0&&order.customerPhone?.replace(/\D/g,'').includes(digits)))
   ).sort((a,b)=>{
@@ -56,6 +68,7 @@ export function selectOrders(orders:Order[],status:string,search:string) {
   });
 }
 export function formatOrderAddress(order:Order) {
+  if (order.fulfillmentMode === 'pickup') return 'Retirada na loja';
   const address=order.deliveryAddress;
   if(typeof address==='string')return address;
   if(!address)return 'Endereço não informado';
@@ -65,8 +78,8 @@ export function whatsappNumber(value:string) {
   const digits=(value||'').replace(/\D/g,'');
   return /^\d{10,11}$/.test(digits)?`55${digits}`:digits;
 }
-export function newUnseenOrderIds(orders:Order[],seen:ReadonlySet<string>) {
-  return orders.filter(order=>normalizeOrderStatus(order.status)==='recebido'&&!seen.has(order.id)).map(order=>order.id);
+export function newUnseenOrderIds(orders:Order[],seen:ReadonlySet<string>, now = Date.now()) {
+  return pendingOrderQueue(orders, now).filter(order=>!seen.has(order.id)).map(order=>order.id);
 }
 export function reviewedOrders(orders:Order[]) {
   return orders.filter((order)=>!!order.review).sort((a,b)=>new Date(b.review!.createdAt).getTime()-new Date(a.review!.createdAt).getTime());

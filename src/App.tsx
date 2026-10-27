@@ -38,6 +38,8 @@ import { AdminSettings } from './components/admin/AdminSettings';
 import { AdminSupport } from './components/admin/AdminSupport';
 import { AdminExtras } from './components/admin/AdminExtras';
 import { AdminAddons } from './components/admin/AdminAddons';
+import { AdminOwnerMessages } from './components/admin/AdminOwnerMessages';
+import { canUseRestrictedAccount, isStoreOperational, storeStatusLabel } from './utils/storeAccess';
 
 interface DeliveryAppContentProps {
   isAdmDonoRoute: boolean;
@@ -74,17 +76,19 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
     );
   }
 
-  // The Master availability stream uses the official store_id and is the
-  // source of truth for customer-facing access.
-  const blockingStatuses = ['suspended', 'maintenance', 'inactive', 'pending_payment', 'archived'];
-  if (blockingStatuses.includes(storeAvailability.status || siteSettings.status)) {
-    return <SiteSuspendedScreen />;
-  }
-
   // 2. ROUTE /admdono - EXCLUSIVE OWNER ADMIN PORTAL
   if (isAdmDonoRoute) {
     if (connection.recoveryMode) return <PasswordSetupGate />;
     if (connection.loading || !connection.session || !connection.store) return <ConnectGate />;
+    const restricted = !isStoreOperational(connection.store.status) || connection.checkInDenied || !isStoreOperational(storeAvailability.status);
+    if (restricted) {
+      if (!canUseRestrictedAccount(connection.store.role)) return <ConnectGate />;
+      // Restriction is enforced at the route boundary as well as navigation.
+      // Never mount operational pages (or their effects) in account-only mode.
+      return <AdminLayout restricted>
+        {adminView === 'messages' ? <AdminOwnerMessages /> : adminView === 'support' ? <AdminSupport /> : <section className="space-y-4 rounded-2xl border border-neutral-800 bg-neutral-950 p-6"><h1>Minha conta</h1><p className="text-sm text-neutral-300">Sua conta permanece acessível. As operações da loja estão indisponíveis conforme o estado definido pelo Master.</p><dl className="space-y-3 text-sm"><div><dt className="text-neutral-400">Loja</dt><dd>{connection.store.name}</dd></div><div><dt className="text-neutral-400">Conta</dt><dd className="break-all">{connection.session.user.email}</dd></div><div><dt className="text-neutral-400">Estado</dt><dd>{storeStatusLabel(connection.checkInBlock?.status || connection.store.status)}</dd></div></dl>{(connection.checkInBlock?.message || storeAvailability.message) && <p className="whitespace-pre-wrap break-words rounded-xl border border-amber-500/30 p-4">{connection.checkInBlock?.message || storeAvailability.message}</p>}</section>}
+      </AdminLayout>;
+    }
     return (
       <AdminLayout>
         {adminView === 'dashboard' && <AdminDashboard />}
@@ -100,10 +104,15 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
         {adminView === 'addons' && <AdminAddons />}
         {adminView === 'settings' && <AdminSettings />}
         {adminView === 'support' && <AdminSupport />}
+        {adminView === 'messages' && <AdminOwnerMessages />}
         {adminView === 'extras' && <AdminExtras />}
       </AdminLayout>
     );
   }
+
+  // Public access follows the current server availability, independently of
+  // the limited account access retained by authorized owners/admins.
+  if (!isStoreOperational(storeAvailability.status)) return <SiteSuspendedScreen />;
 
   // 3. PUBLIC CUSTOMER DELIVERY SITE (RESPONSIVE: Mobile first, fluid tablet & desktop with max-w-4xl / max-w-5xl)
   return (
@@ -114,6 +123,7 @@ const DeliveryAppContent: React.FC<DeliveryAppContentProps> = ({
       <div className="burger-house-content w-full max-w-none min-h-screen flex flex-col relative pb-24 md:pb-16 shadow-2xl">
         {/* Sticky Header */}
         <Header />
+        {storeAvailability.blockMode === 'message' && storeAvailability.message?.trim() && <p role="status" className="mx-3 mt-4 whitespace-pre-wrap break-words rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">{storeAvailability.message}</p>}
 
         {/* Customer Screens Router */}
         <main className="flex-1 w-full px-3 sm:px-6 lg:px-10 xl:px-14 2xl:px-20 py-3 sm:py-6 lg:py-8">

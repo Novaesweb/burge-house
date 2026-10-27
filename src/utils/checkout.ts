@@ -10,6 +10,7 @@ export function buildOrderRequest(order: Omit<Order,'id'|'orderNumber'|'createdA
     customerName:order.customerName,customerPhone:order.customerPhone,
     deliveryAddress:order.deliveryAddress,paymentMethod:order.paymentMethod,
     paymentChange:order.paymentChange,notes:order.notes,couponCode:order.couponCode,
+    ...(order.scheduledFor ? { scheduledFor: order.scheduledFor, fulfillmentMode: order.fulfillmentMode || 'delivery' } : {}),
     items:order.items.map(item=>({productId:item.productId,quantity:item.quantity,
       notes:item.notes,meatPoint:normalizeMeatPoint(item.meatPoint),removals:item.removals,
       selectedAddons:item.selectedAddons?.map(addon=>({id:addon.id}))})),

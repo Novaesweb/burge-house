@@ -175,6 +175,9 @@ export interface Order {
   status: OrderStatus;
   notes?: string;
   estimatedMinutes?: number;
+  scheduledFor?: string;
+  fulfillmentMode?: 'delivery' | 'pickup';
+  preparationMinutes?: number;
   review?: OrderReview;
   createdAt: string;
   updatedAt: string;

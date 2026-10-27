@@ -9,6 +9,7 @@ const compiled=transformSync(source,{loader:'tsx',format:'cjs',define:{'import.m
 const session=(id='owner',token='first')=>({user:{id},access_token:token});
 const official={id:'official-store',nx_id:'official-nx',name:'Loja de teste',status:'active',role:'owner',site_type:'delivery'};
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
+class CentralActionError extends Error { constructor(message,httpStatus,block=null){super(message);this.httpStatus=httpStatus;this.block=block;} }
 
 // Executes the actual provider with deterministic hooks and mocked Auth/network.
 // This tests lifecycle races without credentials, browser or a live database.
@@ -30,13 +31,14 @@ function harness({initial=session(),sessionRead,validate=async()=>({...official}
   signOut:async()=>{current=null;authListener?.('SIGNED_OUT',null);return {error:null};},
  }};
  const service={
+  CentralActionError,
   validateOfficialStore:async(...args)=>{validationCalls++;return validate(...args);},
   checkIn:async(...args)=>{checkInCalls++;return checkIn(...args);},
   getRegistrationStatus:async()=>{throw Error('Unexpected registration path');},
  };
  const module={exports:{}};
  vm.runInNewContext(compiled,{
-  module,exports:module.exports,require(name){if(name==='react')return hooks;if(name==='../lib/supabase')return {supabase:client};if(name==='../services/connectService')return service;throw Error(name);},
+  module,exports:module.exports,require(name){if(name==='react')return hooks;if(name==='../lib/supabase')return {supabase:client};if(name==='../services/connectService')return service;if(name==='../utils/storeAccess')return {checkInRetryDelay:n=>Math.min(60_000*2**Math.max(0,n-1),900_000)};throw Error(name);},
   TEST_ENV:{VITE_NOVAESWEB_STORE_ID:'official-store',VITE_NOVAESWEB_NX_ID:'official-nx'},
   localStorage:{getItem:()=>null},
   window:{setInterval(callback){intervals.add(callback);return callback;},clearInterval(callback){intervals.delete(callback);}},
@@ -84,4 +86,27 @@ test('session renewal preserves password recovery and store status is never forc
  const app=harness({validate:async()=>({...official,status:'maintenance'})});await app.settle();assert.equal(app.value.store.status,'maintenance');
  app.emit('PASSWORD_RECOVERY',session());await app.settle();assert.equal(app.value.recoveryMode,true);
  app.emit('TOKEN_REFRESHED',session('owner','new'));await app.settle();assert.equal(app.value.recoveryMode,true);
+});
+
+test('blocked store preserves a freshly authorized owner account without check-in',async()=>{
+ for (const status of ['maintenance','suspended','archived']) {
+  const app=harness({validate:async()=>({...official,status})});await app.settle();
+  assert.equal(app.value.store.status,status);assert.equal(app.checkInCalls,0);
+ }
+});
+
+test('check-in denial preserves account, exposes safe block fields and blocks operations',async()=>{
+ const block={status:'suspended',blockMode:'suspension',message:'Revisar cadastro',returnAt:null};
+ const app=harness({checkIn:async()=>{throw new CentralActionError('Suspensa',403,block);}});await app.settle();
+ assert.equal(app.value.store.status,'suspended');assert.equal(app.value.checkInDenied,true);
+ assert.equal(app.value.checkInBlock.message,'Revisar cadastro');assert.equal(app.value.error,'Suspensa');
+ app.focus();await app.settle();assert.equal(app.checkInCalls,1);assert.equal(app.value.checkInDenied,true);
+});
+
+test('network check-in failure backs off but every refresh revalidates membership',async()=>{
+ let member=true;
+ const app=harness({validate:async()=>{if(!member)throw Error('Sem vínculo ativo');return official;},checkIn:async()=>{throw Error('Sem rede');}});
+ await app.settle();assert.equal(app.value.store.id,official.id);assert.equal(app.checkInCalls,1);
+ app.focus();await app.settle();assert.equal(app.checkInCalls,1);assert.equal(app.validationCalls,2);
+ member=false;app.poll();await app.settle();assert.equal(app.value.store,null);
 });

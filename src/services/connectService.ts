@@ -8,9 +8,14 @@ export interface RegistrationStatus {
   site_name?: string;
   review_note?: string;
 }
-export interface OfficialStore { id: string; nx_id: string; name: string; status: string; site_type: string | null; role: 'owner' | 'admin' | 'staff' | 'viewer'; }
+export interface OfficialStore { id: string; nx_id: string; name: string; status: string; site_type: string | null; plan_code?:string|null; role: 'owner' | 'admin' | 'staff' | 'viewer'; }
 export interface RegistrationInput { site_name: string; site_domain?: string; owner_name?: string; plan_code?: string; }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export interface CheckInBlock { status: string; blockMode: string | null; message: string | null; returnAt: string | null; }
+export class CentralActionError extends Error {
+  constructor(message: string, public httpStatus: number, public block: CheckInBlock | null = null) { super(message); this.name = 'CentralActionError'; }
+}
 
 export async function centralAction<T>(body: Record<string, unknown>): Promise<T> {
   const client = requireSupabase();
@@ -24,7 +29,14 @@ export async function centralAction<T>(body: Record<string, unknown>): Promise<T
     const response = error.context;
     if (response instanceof Response) {
       const payload = await response.clone().json().catch(() => null);
-      message = payload?.error || ({401:'Sua sessão expirou. Entre novamente.',403:'Sua conta não tem permissão para esta operação.',404:'Cadastro não encontrado.',429:'Limite de solicitações atingido. Tente mais tarde.'} as Record<number,string>)[response.status] || message;
+      message = typeof payload?.error === 'string' ? payload.error : ({401:'Sua sessão expirou. Entre novamente.',403:'Sua conta não tem permissão para esta operação.',404:'Cadastro não encontrado.',429:'Limite de solicitações atingido. Tente mais tarde.'} as Record<number,string>)[response.status] || message;
+      const block = response.status === 403 && typeof payload?.status === 'string' ? {
+        status: payload.status,
+        blockMode: typeof payload.block_mode === 'string' ? payload.block_mode : null,
+        message: typeof payload.block_message === 'string' ? payload.block_message : message,
+        returnAt: typeof payload.status_until === 'string' ? payload.status_until : typeof payload.block_until === 'string' ? payload.block_until : null,
+      } : null;
+      throw new CentralActionError(message, response.status, block);
     }
     throw new Error(message);
   }
@@ -74,12 +86,12 @@ export async function validateOfficialStore(storeId: string, nxId: string): Prom
   const client = requireSupabase();
   const { data: { user }, error: authError } = await client.auth.getUser();
   if (authError || !user) throw new Error('Sua sessão expirou. Entre novamente.');
-  const { data: store, error: storeError } = await client.from('managed_sites').select('id,nx_id,name,status,site_type').eq('id', storeId).eq('nx_id', nxId).maybeSingle();
+  const { data: store, error: storeError } = await client.from('managed_sites').select('id,nx_id,name,status,site_type,plan_code').eq('id', storeId).eq('nx_id', nxId).maybeSingle();
   if (storeError) throw new Error('Não foi possível validar a loja oficial.');
   if (!store) throw new Error('Loja não encontrada ou sem acesso autorizado.');
   const { data: member, error: memberError } = await client.from('store_members').select('role').eq('store_id', store.id).eq('user_id', user.id).eq('is_active', true).maybeSingle();
   if (memberError || !member) throw new Error('Sua conta não tem vínculo ativo com esta loja.');
-  if (['suspended','archived'].includes(store.status)) throw new Error('Esta loja está suspensa ou arquivada pelo Master.');
+  if (!['owner','admin','staff','viewer'].includes(member.role)) throw new Error('Seu vínculo não permite acessar este painel.');
   return { ...store, role: member.role };
 }
 

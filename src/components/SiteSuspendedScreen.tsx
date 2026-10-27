@@ -7,9 +7,9 @@ export const SiteSuspendedScreen: React.FC = () => {
   const status = storeAvailability.status || siteSettings.status;
   const statusLabel = status === 'maintenance'
     ? 'Em manutenção'
-    : status === 'pending_payment'
+    : status === 'pending' || status === 'pending_payment'
       ? 'Aguardando ativação'
-      : status === 'inactive'
+      : status === 'inactive' || status === 'unavailable' || status === 'checking'
         ? 'Temporariamente indisponível'
         : 'Acesso temporariamente suspenso';
   const message = storeAvailability.message?.trim()
@@ -17,7 +17,7 @@ export const SiteSuspendedScreen: React.FC = () => {
   const returnAt = storeAvailability.returnAt ? new Date(storeAvailability.returnAt) : null;
   const hasReturnAt = Boolean(returnAt && !Number.isNaN(returnAt.getTime()));
   const formattedReturn = hasReturnAt
-    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short' }).format(returnAt!)
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'short', timeZone:'America/Sao_Paulo' }).format(returnAt!)
     : null;
 
   return (

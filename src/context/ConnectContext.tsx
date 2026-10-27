@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { checkIn, getRegistrationStatus, validateOfficialStore, type OfficialStore, type RegistrationStatus } from '../services/connectService';
+import { CentralActionError, checkIn, getRegistrationStatus, validateOfficialStore, type CheckInBlock, type OfficialStore, type RegistrationStatus } from '../services/connectService';
+import { checkInRetryDelay } from '../utils/storeAccess';
 
-type Connection = { session: Session | null; loading: boolean; store: OfficialStore | null; registration: RegistrationStatus | null; error: string; recoveryMode: boolean; clearRecoveryMode: () => void; refresh: (requestId?: string) => Promise<void>; signOut: () => Promise<void> };
+type Connection = { session: Session | null; loading: boolean; store: OfficialStore | null; registration: RegistrationStatus | null; error: string; checkInBlock: CheckInBlock | null; checkInDenied: boolean; recoveryMode: boolean; clearRecoveryMode: () => void; refresh: (requestId?: string) => Promise<void>; signOut: () => Promise<void> };
 const Context = createContext<Connection | null>(null);
 export function ConnectProvider({ children }: {children: React.ReactNode}) {
   const [session, setSession] = useState<Session | null>(null);
@@ -12,9 +13,12 @@ export function ConnectProvider({ children }: {children: React.ReactNode}) {
   const [store, setStore] = useState<OfficialStore | null>(null);
   const [registration, setRegistration] = useState<RegistrationStatus | null>(null);
   const [error, setError] = useState('');
+  const [checkInBlock, setCheckInBlock] = useState<CheckInBlock | null>(null);
+  const [checkInDenied, setCheckInDenied] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const generation = useRef(0);
   const lastCheckIn = useRef(0);
+  const retry = useRef({ failures: 0, after: 0 });
   const currentSession = useRef<Session | null>(null);
   const userId = session?.user.id || null;
   const loading = authLoading || Boolean(userId && validationIdentity !== userId);
@@ -29,6 +33,8 @@ export function ConnectProvider({ children }: {children: React.ReactNode}) {
       if (currentSession.current?.user.id !== next?.user.id) {
         ++generation.current;
         lastCheckIn.current = 0;
+        retry.current = { failures: 0, after: 0 };
+        setCheckInBlock(null); setCheckInDenied(false);
         setStore(null); setRegistration(null); setError(''); setValidationIdentity(null);
         setRecoveryMode(false);
       }
@@ -74,12 +80,28 @@ export function ConnectProvider({ children }: {children: React.ReactNode}) {
         if (result.status === 'approved') candidate = await validateOfficialStore(result.store_id || '', result.nx_id || '');
       }
       if (revision !== generation.current) return;
-      if (candidate && Date.now() - lastCheckIn.current > 240_000) {
-        await checkIn(candidate);
-        lastCheckIn.current = Date.now();
+      let checkInError = '';
+      if (candidate && ['active', 'pending'].includes(candidate.status) && Date.now() >= retry.current.after && Date.now() - lastCheckIn.current > 240_000) {
+        try {
+          await checkIn(candidate);
+          if (revision !== generation.current) return;
+          lastCheckIn.current = Date.now(); retry.current = { failures: 0, after: 0 };
+          setCheckInBlock(null); setCheckInDenied(false);
+        } catch (failure) {
+          if (revision !== generation.current) return;
+          retry.current.failures += 1;
+          retry.current.after = Date.now() + checkInRetryDelay(retry.current.failures);
+          checkInError = failure instanceof Error ? failure.message : 'Falha ao confirmar a conexão com o Master.';
+          if (failure instanceof CentralActionError && failure.httpStatus === 403) {
+            setCheckInDenied(true); setCheckInBlock(failure.block);
+            if (failure.block) candidate = { ...candidate, status: failure.block.status };
+          }
+        }
       }
       if (revision !== generation.current) return;
-      setStore(candidate); setError('');
+      // A check-in cannot grant membership. The candidate was freshly checked
+      // through Auth, managed_sites RLS and the active store_members record.
+      setStore(candidate); setError(checkInError);
     } catch (failure) {
       if (revision !== generation.current) return;
       setStore(null); setError(failure instanceof Error ? failure.message : 'Falha ao conferir a conexão.');
@@ -90,19 +112,19 @@ export function ConnectProvider({ children }: {children: React.ReactNode}) {
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 30_000);
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 60_000);
     const onVisible = () => { if (document.visibilityState === 'visible') void refresh(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { ++generation.current; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [refresh]);
 
   const signOut = async () => {
-    ++generation.current; setStore(null); setRegistration(null); setValidationIdentity(null); setRecoveryMode(false);
+    ++generation.current; setStore(null); setRegistration(null); setValidationIdentity(null); setRecoveryMode(false); setCheckInBlock(null); setCheckInDenied(false);
     const result = await supabase?.auth.signOut();
     if (result?.error) { await refresh(); throw result.error; }
     currentSession.current = null;
     setSession(null);
   };
-  return <Context.Provider value={{session,loading,store,registration,error,recoveryMode,clearRecoveryMode:()=>setRecoveryMode(false),refresh,signOut}}>{children}</Context.Provider>;
+  return <Context.Provider value={{session,loading,store,registration,error,checkInBlock,checkInDenied,recoveryMode,clearRecoveryMode:()=>setRecoveryMode(false),refresh,signOut}}>{children}</Context.Provider>;
 }
 export function useConnect() { const context = useContext(Context); if (!context) throw new Error('ConnectProvider ausente.'); return context; }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Settings,
   Store,
@@ -20,6 +20,9 @@ import {
 import { useStore } from '../../context/StoreContext';
 import { PaymentMethod } from '../../types';
 import { WhatsAppConnection } from './WhatsAppConnection';
+import { StoreOrderUsageWidget } from './StoreOrderUsageWidget';
+import { settingsSectionFromUrl, settingsSectionUrl } from '../../services/planUsageService';
+import { useConnect } from '../../context/ConnectContext';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -32,6 +35,18 @@ export const AdminSettings: React.FC = () => {
     updateStoreAdminAction,
     ownerName,
   } = useStore();
+  const { store, session } = useConnect();
+  const canViewPlan = Boolean(session && ['owner', 'admin'].includes(store?.role || ''));
+  const [section, setSection] = useState(() => settingsSectionFromUrl(window.location.href));
+  useEffect(() => {
+    const onPopState = () => setSection(settingsSectionFromUrl(window.location.href));
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+  const selectSection = (next: 'geral' | 'plano') => {
+    window.history.pushState(null, '', settingsSectionUrl(window.location.href, next));
+    setSection(next);
+  };
 
   const [name, setName] = useState(siteSettings.name);
   const [phone, setPhone] = useState(siteSettings.phone);
@@ -133,6 +148,11 @@ export const AdminSettings: React.FC = () => {
         </div>
       </div>
 
+      <nav aria-label="Seções das configurações" className="flex flex-wrap gap-2 border-b border-neutral-800 pb-4">
+        <button type="button" aria-current={section === 'geral' ? 'page' : undefined} onClick={() => selectSection('geral')} className={`rounded-xl px-4 py-3 text-sm font-bold ${section === 'geral' ? 'bg-red-600 text-white' : 'bg-neutral-900 text-neutral-300'}`}>Geral</button>
+        {canViewPlan && <button type="button" aria-current={section === 'plano' ? 'page' : undefined} onClick={() => selectSection('plano')} className={`rounded-xl px-4 py-3 text-sm font-bold ${section === 'plano' ? 'bg-violet-600 text-white' : 'bg-neutral-900 text-neutral-300'}`}>Meu Plano</button>}
+      </nav>
+      {section === 'plano' ? <StoreOrderUsageWidget /> : <>
       {successMsg && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
@@ -435,6 +455,7 @@ export const AdminSettings: React.FC = () => {
         </div>
       </form>
       <WhatsAppConnection />
+      </>}
     </div>
   );
 };

@@ -19,12 +19,13 @@ import { useStore } from '../context/StoreContext';
 import { isRemoteStore } from '../services/storeService';
 import { PaymentMethod } from '../types';
 import { formatBRL } from '../utils/formatters';
+import { formatScheduledTime, loadScheduleOptions, type ScheduleOptions } from '../services/schedulingService';
+import {loadPremiumFeatures} from '../services/premiumFeatureService';
 
 export const CheckoutView: React.FC = () => {
   const {
     siteId,
     cartSubtotal,
-    cartTotal,
     siteSettings,
     handleCheckoutOrder,
     setCustomerView,
@@ -36,11 +37,50 @@ export const CheckoutView: React.FC = () => {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id=window.setInterval(()=>setNow(new Date()),30000);return()=>window.clearInterval(id); }, []);
   const scheduleOpen = isWithinOpeningHours(siteSettings, now);
+  const [scheduleOptions, setScheduleOptions] = useState<ScheduleOptions | null>(null);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [fulfillmentMode, setFulfillmentMode] = useState<'delivery' | 'pickup'>('delivery');
+  useEffect(() => {
+    let active = true, fetching = false;
+    const refresh = async () => {
+      if (fetching || document.visibilityState !== 'visible') return;
+      fetching = true;
+      setScheduleLoading(true);
+      try {
+        const options = await loadScheduleOptions(siteId);
+        if (active) { setScheduleOptions(options); setScheduleError(''); }
+      } catch (error) { if (active) { setScheduleOptions(null); setScheduleError(error instanceof Error ? error.message : 'Horários indisponíveis.'); } }
+      finally { fetching = false; if (active) setScheduleLoading(false); }
+    };
+    setScheduleOptions(null); setScheduleError(''); setScheduledFor(''); setFulfillmentMode('delivery');
+    void refresh();
+    const visible = () => { void refresh(); };
+    const timer = window.setInterval(() => void refresh(), 60000);
+    document.addEventListener('visibilitychange', visible);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', visible); };
+  }, [siteId]);
+  const scheduling = Boolean(scheduledFor);
+  const pickup = scheduling && fulfillmentMode === 'pickup';
+  useEffect(() => {
+    if (scheduleOptions && !scheduleOptions.fulfillment_modes.includes(fulfillmentMode)) setFulfillmentMode(scheduleOptions.fulfillment_modes[0]);
+  }, [scheduleOptions, fulfillmentMode]);
   const [couponInput, setCouponInput] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponFeedback, setCouponFeedback] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [couponAvailable,setCouponAvailable]=useState<boolean|null>(null);
+  useEffect(()=>{
+    let active=true,fetching=false;
+    const refresh=async()=>{if(fetching)return;fetching=true;try{const value=await loadPremiumFeatures(siteId);if(active)setCouponAvailable(value?.coupons??null);}catch{if(active)setCouponAvailable(false);}finally{fetching=false;}};
+    setCouponAvailable(null);void refresh();
+    const visible=()=>{if(document.visibilityState==='visible')void refresh();};
+    const timer=window.setInterval(visible,60_000);document.addEventListener('visibilitychange',visible);
+    return()=>{active=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',visible);};
+  },[siteId]);
+  useEffect(()=>{if(couponAvailable===false){setCouponCode('');setCouponDiscount(0);}},[couponAvailable]);
   const couponRequestId = useRef(0);
   const [cep, setCep] = useState('');
   const [cepMessage, setCepMessage] = useState('');
@@ -117,7 +157,8 @@ export const CheckoutView: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
+    if (!scheduling && !scheduleOpen) { setErrorMsg('A loja está fechada neste horário. Volte durante o funcionamento.'); return; }
+    if (scheduling && (!scheduleOptions?.enabled || !scheduleOptions.slots.includes(scheduledFor) || !scheduleOptions.fulfillment_modes.includes(fulfillmentMode))) { setErrorMsg('O horário não está mais disponível. Escolha outro horário.'); return; }
     if (!name.trim()) {
       setErrorMsg('Por favor informe seu nome.');
       return;
@@ -126,7 +167,7 @@ export const CheckoutView: React.FC = () => {
       setErrorMsg('Por favor informe seu telefone.');
       return;
     }
-    if (!street.trim() || !number.trim() || !neighborhood.trim()) {
+    if (!pickup && (!street.trim() || !number.trim() || !neighborhood.trim())) {
       setErrorMsg('Por favor complete os dados do endereço de entrega.');
       return;
     }
@@ -152,6 +193,7 @@ export const CheckoutView: React.FC = () => {
         couponCode: couponCode || undefined,
         paymentChange: paymentMethod === 'cash' ? paymentChange : undefined,
         notes,
+        ...(scheduling ? { scheduledFor, fulfillmentMode } : {}),
       });
       localStorage.setItem(customerKey(phone),JSON.stringify({name:name.trim(),cep,street:street.trim(),number:number.trim(),complement:complement.trim(),neighborhood:neighborhood.trim()}));
       localStorage.setItem(`delivery:customer-phone:${siteId}`,phone.replace(/\D/g,''));
@@ -164,7 +206,7 @@ export const CheckoutView: React.FC = () => {
   };
 
   useEffect(() => { ++couponRequestId.current; setCouponCode(''); setCouponDiscount(0); setCouponFeedback(''); setCouponLoading(false); }, [cartSubtotal]);
-  const deliveryFee = typeof siteSettings?.deliveryFee === 'number' ? siteSettings.deliveryFee : 5.0;
+  const deliveryFee = pickup ? 0 : typeof siteSettings?.deliveryFee === 'number' ? siteSettings.deliveryFee : 5.0;
 
   return (
     <div className="pb-12 px-1">
@@ -196,6 +238,16 @@ export const CheckoutView: React.FC = () => {
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Form Fields */}
         <div className="lg:col-span-7 space-y-5">
+          {scheduleOptions?.enabled && <section className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-900/90 p-4" aria-label="Agendar pedido">
+            <h3 className="font-black text-white">Quando deseja receber?</h3>
+            <label className="block text-sm text-neutral-300" htmlFor="schedule-slot">Horário de entrega ou retirada (Brasília)</label>
+            <select id="schedule-slot" value={scheduledFor} onChange={event => setScheduledFor(event.target.value)} disabled={scheduleLoading || isSubmitting} className="w-full rounded-xl border border-neutral-700 bg-black p-3 text-white">
+              <option value="">Agora{!scheduleOpen ? ' — loja fechada' : ''}</option>
+              {scheduleOptions.slots.map(slot => <option key={slot} value={slot}>{formatScheduledTime(slot)}</option>)}
+            </select>
+            {scheduling && <><label htmlFor="schedule-mode" className="block text-sm text-neutral-300">Como receber</label><select id="schedule-mode" value={fulfillmentMode} onChange={event => setFulfillmentMode(event.target.value as 'delivery' | 'pickup')} disabled={isSubmitting} className="w-full rounded-xl border border-neutral-700 bg-black p-3 text-white">{scheduleOptions.fulfillment_modes.map(mode => <option key={mode} value={mode}>{mode === 'pickup' ? 'Retirar na loja — sem taxa de entrega' : 'Entrega no endereço'}</option>)}</select><p className="text-xs text-neutral-400">O horário será validado no servidor ao confirmar. O pedido aguarda o aceite da loja.</p></>}
+          </section>}
+          {scheduleError && <p role="status" className="text-sm text-amber-300">{scheduleError} O pedido imediato continua disponível no horário de funcionamento.</p>}
           {/* Section 1: Seus dados */}
           <div className="space-y-3">
             <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
@@ -247,7 +299,7 @@ export const CheckoutView: React.FC = () => {
           </div>
 
           {/* Section 2: Endereço de Entrega */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-2" hidden={pickup}>
             <div className="flex items-center justify-between">
               <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
@@ -309,7 +361,7 @@ export const CheckoutView: React.FC = () => {
                       onChange={(e) => setStreet(e.target.value)}
                       placeholder="Ex: Av. Paulista"
                       className="w-full text-base p-3.5 rounded-xl bg-black border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-red-500 font-medium"
-                      required
+                      required={!pickup}
                     />
                   </div>
 
@@ -323,7 +375,7 @@ export const CheckoutView: React.FC = () => {
                       onChange={(e) => setNumber(e.target.value)}
                       placeholder="Ex: 1000"
                       className="w-full text-base p-3.5 rounded-xl bg-black border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-red-500 font-medium"
-                      required
+                      required={!pickup}
                     />
                   </div>
 
@@ -350,7 +402,7 @@ export const CheckoutView: React.FC = () => {
                       onChange={(e) => setNeighborhood(e.target.value)}
                       placeholder="Ex: Centro / Bela Vista"
                       className="w-full text-base p-3.5 rounded-xl bg-black border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-red-500 font-medium"
-                      required
+                      required={!pickup}
                     />
                   </div>
                 </div>
@@ -469,7 +521,7 @@ export const CheckoutView: React.FC = () => {
             <h4 className="text-sm font-black text-neutral-300 uppercase tracking-wider mb-1">
               Resumo do Pedido
             </h4>
-            <div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 mb-4 space-y-2">
+            {couponAvailable!==false&&<div className="rounded-xl bg-neutral-950 border border-neutral-800 p-3 mb-4 space-y-2">
                 <label className="text-sm font-bold text-white block">Cupom de desconto</label>
                 <div className="flex gap-2">
                   <input value={couponInput} onChange={e=>{++couponRequestId.current;setCouponInput(e.target.value.toUpperCase());setCouponCode('');setCouponDiscount(0);setCouponFeedback('');setCouponLoading(false);}}
@@ -479,7 +531,7 @@ export const CheckoutView: React.FC = () => {
                 </div>
                 {couponFeedback && <p role="status" className="text-xs text-neutral-300">{couponFeedback}</p>}
                 {couponDiscount>0 && <p className="text-green-400 text-sm">Desconto: -{formatBRL(couponDiscount)}</p>}
-              </div>
+              </div>}
               <div className="flex justify-between text-sm text-neutral-300">
               <span>Subtotal</span>
               <span className="font-bold text-white text-base">
@@ -497,12 +549,12 @@ export const CheckoutView: React.FC = () => {
                 Total do Pedido
               </span>
               <span className="text-2xl font-black text-red-500">
-                {formatBRL(Math.max(0, cartTotal - couponDiscount))}
+                {formatBRL(Math.max(0, cartSubtotal + deliveryFee - couponDiscount))}
               </span>
             </div>
           </div>
 
-          {!scheduleOpen && <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/50 p-3 text-sm font-bold text-amber-200">
+          {!scheduleOpen && !scheduling && <p role="status" className="rounded-xl border border-amber-700 bg-amber-950/50 p-3 text-sm font-bold text-amber-200">
             Loja fechada no momento. Confira o horário de funcionamento e volte mais tarde.
           </p>}
           <p className="text-xs leading-relaxed text-neutral-400">Seus dados serão utilizados para registrar, preparar e entregar seu pedido, além de permitir o acompanhamento da compra. Saiba mais na <a href="#/privacidade" className="font-semibold text-red-400 underline underline-offset-2">Política de Privacidade</a> e nos <a href="#/termos" className="font-semibold text-red-400 underline underline-offset-2">Termos de Uso</a>.</p>
@@ -510,8 +562,8 @@ export const CheckoutView: React.FC = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            title={!scheduleOpen ? 'Loja fechada neste horário' : undefined}
-            disabled={isSubmitting || !scheduleOpen || !isRemoteStore(siteId) || acceptedMethods.length === 0}
+            title={!scheduleOpen && !scheduling ? 'Loja fechada neste horário' : undefined}
+            disabled={isSubmitting || (!scheduleOpen && !scheduling) || (scheduling && (!scheduleOptions?.enabled || !scheduleOptions.slots.includes(scheduledFor))) || !isRemoteStore(siteId) || acceptedMethods.length === 0}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-base sm:text-lg shadow-xl shadow-red-950/80 active:scale-98 transition-all flex items-center justify-center gap-3 disabled:opacity-60 cursor-pointer"
           >
             {isSubmitting ? (

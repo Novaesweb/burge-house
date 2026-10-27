@@ -1,6 +1,8 @@
 import React from 'react';
 import { Printer, X, Check, Clock, Phone, MapPin, Receipt, Flame } from 'lucide-react';
 import { Order, SiteSettings } from '../../types';
+import { formatOrderAddress } from '../../utils/adminOrders';
+import { formatScheduledTime } from '../../utils/scheduling';
 
 interface OrderReceiptModalProps {
   order: Order | null;
@@ -25,7 +27,10 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
   });
+  const scheduledTime = order.scheduledFor && Number.isFinite(Date.parse(order.scheduledFor))
+    ? formatScheduledTime(order.scheduledFor) : null;
 
   const paymentLabels: Record<string, string> = {
     pix: 'PIX (Online/Na Entrega)',
@@ -83,10 +88,9 @@ export const OrderReceiptModal: React.FC<OrderReceiptModalProps> = ({
             <div className="font-bold text-xs uppercase">Cliente: {order.customerName}</div>
             <div className="text-[11px]">Tel: {order.customerPhone}</div>
             <div className="text-[11px] font-semibold">
-              Endereço: {order.deliveryAddress.street}, {order.deliveryAddress.number}
-              {order.deliveryAddress.complement && ` - ${order.deliveryAddress.complement}`}
+              {order.fulfillmentMode === 'pickup' ? 'Recebimento: ' : 'Endereço: '}{formatOrderAddress(order)}
             </div>
-            <div className="text-[11px]">Bairro: {order.deliveryAddress.neighborhood}</div>
+            {scheduledTime && <div className="text-[11px] font-bold">Agendado para: {scheduledTime} (Brasília)</div>}
           </div>
 
           {/* Items Table */}

@@ -11,10 +11,10 @@ export function NewOrderQueue({ orders, now, busyIds, search, connected, onAccep
   onAccept:(order:Order)=>void; onReject:(order:Order)=>void; onDetails:(order:Order)=>void;
   onPrint:(order:Order)=>void; onWhatsApp:(order:Order)=>void;
 }) {
-  const queue=pendingOrderQueue(orders);
+  const queue=pendingOrderQueue(orders, now);
   const current=queue[0];
   const remaining=queue.slice(1);
-  const matching=new Set(selectOrders(queue,'recebido',search).map(order=>order.id));
+  const matching=new Set(selectOrders(queue,'recebido',search,now).map(order=>order.id));
   const [limit,setLimit]=useState(ORDER_PAGE_SIZE);
   const filteredRemaining=remaining.filter(order=>!search.trim()||matching.has(order.id));
   return <section className="new-order-queue" aria-label="Fila de atendimento de novos pedidos">

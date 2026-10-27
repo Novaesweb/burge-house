@@ -52,6 +52,7 @@ import {
   sendSupportMessage,
 } from '../services/storeService';
 import { orderStageFromUrl } from '../utils/adminOrders';
+import { startOrderReportingReconciliation } from '../services/orderReportingService';
 
 export type CustomerView =
   | 'home'
@@ -76,6 +77,7 @@ export type AdminView =
   | 'reviews'
   | 'addons'
   | 'settings'
+  | 'messages'
   | 'support'
   | 'extras';
 
@@ -162,6 +164,8 @@ interface StoreContextType {
     paymentChange?: string;
     couponCode?: string;
     notes?: string;
+    scheduledFor?: string;
+    fulfillmentMode?: 'delivery' | 'pickup';
   }) => Promise<Order>;
 
   createManualOrderAction: (order: Omit<Order,'id'|'orderNumber'|'createdAt'|'updatedAt'>) => Promise<Order>;
@@ -195,7 +199,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [dataError, setDataError] = useState('');
   const [siteId, setSiteId] = useState<string>(() => getStoreSiteId());
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
-  const [storeAvailability, setStoreAvailability] = useState<StoreAvailability>({ status: 'active' });
+  const [storeAvailability, setStoreAvailability] = useState<StoreAvailability>({ status: 'checking' });
   const [adminId, setAdminId] = useState<string>(() => getStoreAdminId(getStoreSiteId()));
   const [storeAdmin, setStoreAdmin] = useState<StoreAdmin>(DEFAULT_STORE_ADMIN);
   // A loja oficial nunca mostra o catálogo de demonstração enquanto o catálogo
@@ -211,9 +215,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // App mode & subviews ('customer' | 'admin')
   const [appMode, setAppMode] = useState<'customer' | 'admin'>('customer');
   const [customerView, setCustomerView] = useState<CustomerView>('home');
-  const [adminView, setAdminView] = useState<AdminView>(() => orderStageFromUrl(window.location.href) ? 'orders' : 'dashboard');
+  const [adminView, setAdminView] = useState<AdminView>(() => new URL(window.location.href).searchParams.get('secao') === 'plano' ? 'settings' : orderStageFromUrl(window.location.href) ? 'orders' : 'dashboard');
   useEffect(() => {
-    const onNavigation = () => { if (orderStageFromUrl(window.location.href)) setAdminView('orders'); };
+    const onNavigation = () => { if (new URL(window.location.href).searchParams.get('secao') === 'plano') setAdminView('settings'); else if (orderStageFromUrl(window.location.href)) setAdminView('orders'); };
     window.addEventListener('popstate', onNavigation);
     return () => window.removeEventListener('popstate', onNavigation);
   }, []);
@@ -238,12 +242,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isOwnerLoginModalOpen,setIsOwnerLoginModalOpen] = useState(false);
   const loginOwner = (_name: string,_pin: string): boolean => false;
   const logoutOwner = () => { void connection.signOut(); };
+  useEffect(()=>{
+    if(!connection.session||connection.checkInDenied||connection.store?.status!=='active'||storeAvailability.status!=='active'||!['owner','admin'].includes(connection.store.role))return;
+    return startOrderReportingReconciliation(connection.store.id, connection.session.user.id);
+  },[connection.store?.id,connection.store?.role,connection.store?.status,connection.checkInDenied,connection.session?.user.id,storeAvailability.status]);
   useEffect(() => {
-    setConnectedStore(connection.store);
+    setConnectedStore(connection.store, !connection.checkInDenied && connection.store?.status === 'active' && storeAvailability.status === 'active');
     setSiteId(getStoreSiteId());
     setOrders([]); setCustomers([]); setManualPayments([]); setActiveOrder(null);
     setDataError('');
-  },[connection.store?.id,connection.store?.role,connection.session?.user.id]);
+  },[connection.store?.id,connection.store?.role,connection.store?.status,connection.checkInDenied,connection.session?.user.id,storeAvailability.status]);
   useEffect(() => {
     const onError=(event:Event)=>setDataError((event as CustomEvent<string>).detail);
     window.addEventListener('delivery-data-error',onError);
@@ -316,7 +324,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setProducts(prods);
             // Itens de um catálogo anterior não podem chegar ao checkout.
             // O cliente vê o aviso para adicioná-los novamente com o cardápio atual.
-            setCart((current) => current.filter((item) =>
+            if(storeAvailability.status === 'active')setCart((current) => current.filter((item) =>
               prods.some((product) => product.id === item.product.id && product.isActive !== false)
             ));
           }
@@ -379,7 +387,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => {
       unsubs.forEach((u) => u?.());
     };
-  }, [siteId, connection.store?.id, connection.session?.user.id]);
+  }, [siteId, connection.store?.id, connection.store?.status, connection.checkInDenied, connection.session?.user.id,storeAvailability.status]);
 
   // Sync active order if orders list changes
   useEffect(() => {
@@ -488,6 +496,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     paymentChange?: string;
     couponCode?: string;
     notes?: string;
+    scheduledFor?: string;
+    fulfillmentMode?: 'delivery' | 'pickup';
   }): Promise<Order> => {
     if (cart.length === 0) {
       throw new Error('Seu carrinho foi atualizado. Adicione um item do cardápio para continuar.');
@@ -520,6 +530,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isPaid: false,
       paymentStatus: 'pending',
       notes: orderData.notes,
+      scheduledFor: orderData.scheduledFor,
+      fulfillmentMode: orderData.fulfillmentMode,
       estimatedMinutes: 40,
     });
 
