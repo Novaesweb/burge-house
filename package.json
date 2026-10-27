@@ -16,7 +16,8 @@
     "test:scheduling": "node --import tsx --test --test-isolation=none tests/scheduling.mjs tests/scheduling-database.mjs",
     "whatsapp:connection": "pwsh -NoProfile -File backend/whatsapp/connection.ps1",
     "test:whatsapp-connection": "node --test --test-isolation=none tests/whatsapp-connection.mjs tests/whatsapp-connection-client.mjs tests/store-connection.mjs tests/whatsapp.mjs",
-    "test:marketing": "node tests/marketing-database.mjs && node --test --test-isolation=none tests/marketing-worker.mjs"
+    "test:marketing": "node tests/marketing-database.mjs && node --test --test-isolation=none tests/marketing-worker.mjs",
+    "test:guide": "node --test tests/admin-guide.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

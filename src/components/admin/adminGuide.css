@@ -1,0 +1,28 @@
+.admin-guide,.admin-guide-settings{margin-bottom:24px;border:1px solid #7950a655;border-radius:20px;background:linear-gradient(135deg,#241d2d,#16151b);color:#e5e7eb;overflow-wrap:anywhere}
+.admin-guide-header,.admin-guide-settings{padding:18px}
+.admin-guide-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.admin-guide h2,.admin-guide-settings h2{font-size:17px;font-weight:750;line-height:1.5;margin:4px 0 0;color:#f5f3ff}
+.admin-guide-settings h2{display:flex;align-items:center;gap:9px;margin:0}
+.admin-guide-eyebrow{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:750;letter-spacing:.12em;color:#d8b4fe}
+.admin-guide button,.admin-guide-settings button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 12px;border:1px solid #665574;border-radius:10px;background:#33283e;color:#f3e8ff;font-size:12px;font-weight:650;line-height:1.5;text-align:left;cursor:pointer}
+.admin-guide button:hover,.admin-guide-settings button:hover{background:#483459}.admin-guide button:disabled{opacity:.45;cursor:not-allowed}
+.admin-guide-actions{display:flex;gap:8px;flex-wrap:wrap}
+.admin-guide-body{padding:0 18px 18px}
+.admin-guide-notice,.admin-guide-settings p{font-size:12px;line-height:1.8;color:#c4b7ce;margin:0 0 14px}
+.admin-guide-selectors{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:18px}
+.admin-guide-selectors label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:650;color:#e9d5ff}.admin-guide-selectors label>span{display:flex;align-items:center;gap:6px}
+.admin-guide select,.admin-guide input{min-width:0;width:100%;box-sizing:border-box;border:1px solid #61516c;border-radius:10px;background:#141218;color:#f3f4f6;padding:11px;font:inherit;font-size:13px}
+.admin-guide-step{padding:18px;border:1px solid #62516f;border-radius:14px;background:#17141d}
+.admin-guide-progress{color:#c4a5df;font-size:11px;margin:0 0 10px}
+.admin-guide-step h3{font-size:19px;font-weight:750;color:#faf5ff;margin:0 0 10px;line-height:1.5}
+.admin-guide-step>p:not(.admin-guide-progress),.admin-guide-step li{font-size:13px;line-height:1.9;color:#ddd5e4}
+.admin-guide-step ul{padding-left:20px;margin:10px 0 0;list-style:disc}.admin-guide-step li+li{margin-top:7px}
+.admin-guide-topics{margin-top:14px;border:1px solid #4d4058;border-radius:12px;padding:12px}
+.admin-guide-topics summary{cursor:pointer;color:#ddd0ed;font-weight:650;font-size:12px;line-height:1.8}
+.admin-guide-topics ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style:none;padding:12px 0 0;margin:0}
+.admin-guide-topics button{width:100%;justify-content:flex-start;background:#211a29}.admin-guide-topics button[aria-current=step]{border-color:#c084fc;background:#513467}
+.admin-guide-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px}.admin-guide-controls>span{font-size:10px;color:#b2a5bb;text-align:center}.admin-guide-controls button:last-child{background:#65418c;border-color:#a57fc6}
+.admin-guide-search{border:1px solid #61516c;border-radius:12px;padding:12px;margin:0 0 16px}.admin-guide-search p{font-size:12px;color:#ddc8ee;margin:0 0 10px}.admin-guide-search ul{padding:0;list-style:none;margin:0 0 10px;display:grid;gap:8px}.admin-guide-search li button{width:100%;justify-content:space-between;gap:12px}.admin-guide-search li button span{font-size:10px;color:#cbb1df}
+.admin-guide-toggle{display:flex;align-items:center;gap:10px;border:1px solid #665574;border-radius:12px;background:#201a29;padding:14px;font-size:14px;font-weight:700;cursor:pointer}.admin-guide-toggle input{width:19px;height:19px;accent-color:#c084fc;flex-shrink:0}
+.admin-guide-settings-actions{margin-top:14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}.admin-guide-settings-actions p{margin:0;flex:1;min-width:180px}.admin-guide-warning{margin:12px 18px;color:#fde68a;font-size:12px}
+@media(max-width:640px){.admin-guide-header{flex-direction:column}.admin-guide-actions{width:100%}.admin-guide-actions button{flex:1}.admin-guide-selectors{grid-template-columns:1fr}.admin-guide-topics ol{grid-template-columns:1fr}.admin-guide-controls>span{order:3;width:100%}.admin-guide-controls button{flex:1}.admin-guide-header,.admin-guide-settings{padding:15px}.admin-guide-body{padding:0 15px 15px}.admin-guide-step{padding:14px}.admin-guide-step h3{font-size:17px}}

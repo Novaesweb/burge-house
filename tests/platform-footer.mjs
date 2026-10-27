@@ -16,6 +16,7 @@ function component(path,exportName){
   if(name.endsWith('/ConnectContext'))return{useConnect:()=>({session:{user:{id:'owner'}},store:{name:'Loja & Teste',role:'owner',status:'active'}})};
   if(name.endsWith('/PlatformSignature'))return{PlatformSignature,PlatformVersionBadge};
   if(name.endsWith('/GlobalOrderNotifications'))return{GlobalOrderNotifications:()=>null};
+  if(name.endsWith('/AdminGuidePanel'))return{AdminGuidePanel:()=>null};
   if(name.endsWith('/adminOrders'))return{whatsappNumber:value=>'55'+value};
   if(name.endsWith('.png'))return'/logo.png';if(name.endsWith('.css'))return{};
   return nativeRequire(name);

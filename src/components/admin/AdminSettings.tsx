@@ -23,6 +23,8 @@ import { WhatsAppConnection } from './WhatsAppConnection';
 import { StoreOrderUsageWidget } from './StoreOrderUsageWidget';
 import { settingsSectionFromUrl, settingsSectionUrl } from '../../services/planUsageService';
 import { useConnect } from '../../context/ConnectContext';
+import { AdminGuideSettings } from './AdminGuideSettings';
+import './adminGuide.css';
 
 export const AdminSettings: React.FC = () => {
   const {
@@ -152,6 +154,7 @@ export const AdminSettings: React.FC = () => {
         <button type="button" aria-current={section === 'geral' ? 'page' : undefined} onClick={() => selectSection('geral')} className={`rounded-xl px-4 py-3 text-sm font-bold ${section === 'geral' ? 'bg-red-600 text-white' : 'bg-neutral-900 text-neutral-300'}`}>Geral</button>
         {canViewPlan && <button type="button" aria-current={section === 'plano' ? 'page' : undefined} onClick={() => selectSection('plano')} className={`rounded-xl px-4 py-3 text-sm font-bold ${section === 'plano' ? 'bg-violet-600 text-white' : 'bg-neutral-900 text-neutral-300'}`}>Meu Plano</button>}
       </nav>
+      <AdminGuideSettings />
       {section === 'plano' ? <StoreOrderUsageWidget /> : <>
       {successMsg && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">

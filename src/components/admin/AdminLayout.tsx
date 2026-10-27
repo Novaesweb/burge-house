@@ -4,6 +4,7 @@ import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, Chart
 import { useStore, type AdminView } from '../../context/StoreContext';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
 import { PlatformVersionBadge } from '../PlatformSignature';
+import { AdminGuidePanel } from './AdminGuidePanel';
 import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
 import './orders.css';
 const navigation = [
@@ -67,7 +68,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; restricted?: boo
       <header className="admin-topbar"><div className="admin-breadcrumb"><button className="sidebar-menu-button" aria-label={compact ? (menuOpen ? 'Fechar menu' : 'Abrir menu') : (sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral')} title={sidebarHidden ? 'Expandir menu lateral' : 'Recolher menu lateral'} aria-expanded={!sidebarHidden} aria-controls="admin-sidebar" onClick={toggleSidebar}>{compact ? (menuOpen ? <X size={22}/> : <Menu size={22}/>) : (sidebarCollapsed ? <PanelLeftOpen size={21}/> : <PanelLeftClose size={21}/>)}</button><span>Painel da loja</span><ChevronRight size={14}/><strong>{currentLabel}</strong></div>{!restricted && <button className={`store-status-toggle ${siteSettings.isOpen ? 'is-open' : ''}`} onClick={() => updateSettingsAction({isOpen: !siteSettings.isOpen})}><span/>{siteSettings.isOpen ? 'Loja aberta' : 'Loja fechada'}</button>}</header>
       <div className="preview-notice">Conectado ao NovaesWeb Master · Conta autenticada <button onClick={() => void connection.signOut()} style={{float:'right'}}>Sair</button></div>
       {restricted ? <p role="status" className="mx-4 mt-4 rounded-xl border border-amber-500/30 p-4 text-sm text-amber-100">Acesso limitado à conta, mensagens e suporte. As operações da loja dependem da liberação do Master.</p> : <GlobalOrderNotifications />}
-      <main className={`admin-content ${adminView==='orders'||adminView==='reviews'?'is-wide':''}`}>{children}</main>
+      <main className={`admin-content ${adminView==='orders'||adminView==='reviews'?'is-wide':''}`}><AdminGuidePanel allowedAreas={visibleNavigation.map(item=>item.id)} restricted={restricted} onNavigate={navigate}/>{children}</main>
     </div>
   </div>;
 };
