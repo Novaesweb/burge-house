@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, Package, ShoppingBag, FolderTree, Users, Wallet, ChartNoAxesCombined, Settings, Headphones, ArrowUpRight, Menu, X, ChevronRight, Star, UtensilsCrossed, PanelLeftClose, PanelLeftOpen, Megaphone, UserCog, Puzzle, Bell } from 'lucide-react';
 import { useStore, type AdminView } from '../../context/StoreContext';
 import { GlobalOrderNotifications } from './GlobalOrderNotifications';
+import { PlatformVersionBadge } from '../PlatformSignature';
 import burgerHouseLogo from '../../assets/brand/burger-house-logo.png';
 import './orders.css';
 const navigation = [
@@ -60,7 +61,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode; restricted?: boo
         {index === 5 && <div className="sidebar-section-label">GERENCIAMENTO</div>}
         <button className={`admin-nav-item ${(adminView === id || (restricted && id === 'settings' && !['messages','support'].includes(adminView))) ? 'active' : ''}`} onClick={() => navigate(id)}><Icon size={19} /><span>{restricted && id === 'settings' ? 'Minha conta' : label}</span>{id === 'orders' && pending > 0 && <b>{pending}</b>}</button>
       </React.Fragment>)}</nav>
-      <div className="sidebar-bottom"><a href="/" className="admin-store-link">Ver minha loja <ArrowUpRight size={17}/></a><div className="admin-profile"><span className="profile-avatar">{(storeAdmin.name || 'P').charAt(0)}</span><span><strong>{storeAdmin.name || 'Proprietário'}</strong><small>Proprietário</small></span></div></div>
+      <div className="sidebar-bottom"><a href="/" className="admin-store-link">Ver minha loja <ArrowUpRight size={17}/></a><div className="admin-profile"><span className="profile-avatar">{(storeAdmin.name || 'P').charAt(0)}</span><span><strong>{storeAdmin.name || 'Proprietário'}</strong><small>Proprietário</small></span></div><PlatformVersionBadge/></div>
     </aside>
     <div className="admin-workspace">
       <header className="admin-topbar"><div className="admin-breadcrumb"><button className="sidebar-menu-button" aria-label={compact ? (menuOpen ? 'Fechar menu' : 'Abrir menu') : (sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral')} title={sidebarHidden ? 'Expandir menu lateral' : 'Recolher menu lateral'} aria-expanded={!sidebarHidden} aria-controls="admin-sidebar" onClick={toggleSidebar}>{compact ? (menuOpen ? <X size={22}/> : <Menu size={22}/>) : (sidebarCollapsed ? <PanelLeftOpen size={21}/> : <PanelLeftClose size={21}/>)}</button><span>Painel da loja</span><ChevronRight size={14}/><strong>{currentLabel}</strong></div>{!restricted && <button className={`store-status-toggle ${siteSettings.isOpen ? 'is-open' : ''}`} onClick={() => updateSettingsAction({isOpen: !siteSettings.isOpen})}><span/>{siteSettings.isOpen ? 'Loja aberta' : 'Loja fechada'}</button>}</header>

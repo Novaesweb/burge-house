@@ -3,6 +3,7 @@ import { Clock, Phone, MapPin } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import burgerHouseLogo from '../assets/brand/burger-house-logo.png';
 import { whatsappNumber } from '../utils/adminOrders';
+import { PlatformSignature } from './PlatformSignature';
 
 export const Footer: React.FC = () => {
   const { siteSettings } = useStore();
@@ -56,18 +57,7 @@ export const Footer: React.FC = () => {
         </nav>
         <p className="text-center text-[11px] text-amber-300/90">Loja fictícia de demonstração. Não realiza vendas nem entregas reais.</p>
         {/* Bottom Credits */}
-        <div className="pt-3 mt-3 border-t border-neutral-900/80 flex items-center justify-between gap-2 text-[11px]">
-          <div className="text-neutral-400 flex items-center gap-1 font-medium">
-            <span>Criado por</span>
-            <span className="bg-gradient-to-r from-red-500 via-rose-400 to-amber-400 bg-clip-text text-transparent font-extrabold tracking-tight">
-              Novaesweb
-            </span>
-          </div>
-
-          <span className="text-[10px] text-neutral-500">
-            Todos os direitos reservados
-          </span>
-        </div>
+        <div className="pt-3 mt-3 border-t border-neutral-900/80"><PlatformSignature storeName={siteSettings.name}/></div>
 
         {/* Administrative Quick Switchers */}
         <div className="pt-2 flex items-center justify-center gap-4 text-[10px] text-neutral-600">

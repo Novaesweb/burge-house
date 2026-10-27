@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock3, Megaphone, Sparkles, Wrench } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { PlatformSignature } from './PlatformSignature';
 
 export const SiteSuspendedScreen: React.FC = () => {
   const { siteSettings, storeAvailability } = useStore();
@@ -53,7 +54,7 @@ export const SiteSuspendedScreen: React.FC = () => {
           )}
         </section>
 
-        <footer className="novaesweb-blocked-footer"><Sparkles size={14} /> NovaesWeb Connect · Acesso seguro</footer>
+        <footer><div className="novaesweb-blocked-footer"><Sparkles size={14} /> NovaesWeb Connect · Acesso seguro</div><div className="mt-5"><PlatformSignature storeName={siteSettings.name}/></div></footer>
       </div>
     </main>
   );

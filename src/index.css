@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Institutional footer: styles do not affect store contacts or page layout. */
+.novaesweb-institutional-footer{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#94a3b8;font-size:11px;line-height:1.7;min-width:0}
+.novaesweb-footer-signature{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px}
+.novaesweb-heart{display:inline-block;transition:transform .18s ease}
+.novaesweb-footer-signature:hover .novaesweb-heart{transform:scale(1.12)}
+.novaesweb-brand-link{color:#c084fc;font-weight:700;text-decoration:none;text-underline-offset:4px}
+.novaesweb-brand-link:hover,.novaesweb-brand-link:focus-visible{text-decoration:underline;color:#d8b4fe}
+.novaesweb-copyright{margin:0;max-width:100%;overflow-wrap:anywhere}
+.novaesweb-copyright strong{font-weight:700;color:#cbd5e1;white-space:nowrap}
+.novaesweb-version-badge{display:flex;align-items:center;gap:7px;max-width:100%;margin-top:14px;padding:9px 10px;border:1px solid #334155;border-radius:10px;color:#cbd5e1;font-size:10px;line-height:1.5;background:#0f172a66}
+.novaesweb-version-badge>span:last-child{min-width:0;overflow-wrap:anywhere}
+.status-dot-green{color:#4ade80;flex-shrink:0;font-size:12px}
+@media(min-width:768px){.novaesweb-institutional-footer{flex-direction:row;flex-wrap:wrap;justify-content:space-between;text-align:left;gap:12px 24px}}
+@media(prefers-reduced-motion:reduce){.novaesweb-heart{transition:none}.novaesweb-footer-signature:hover .novaesweb-heart{transform:none}}
+
 @layer utilities {
   .scrollbar-none::-webkit-scrollbar {
     display: none;

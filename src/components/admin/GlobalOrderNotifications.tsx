@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BellRing, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { useConnect } from '../../context/ConnectContext';
 import {
   getAudioContextState, getOrderSoundMuteUntil, isOrderSoundMuted,
   muteOrderSoundTemporarily, ORDER_SOUND_EVENT, setOrderSoundMuted,
@@ -9,7 +10,9 @@ import {
 import { newUnseenOrderIds, pendingOrderQueue, ordersForStore, orderStageUrl } from '../../utils/adminOrders';
 
 export const GlobalOrderNotifications: React.FC = () => {
-  const { orders: allOrders, siteId, setAdminView, setSelectedAdminOrder } = useStore();
+  const { orders: allOrders, siteId, appMode, setAdminView, setSelectedAdminOrder } = useStore();
+  const connection = useConnect();
+  const authorized = Boolean(appMode === 'admin' && connection.session && connection.store?.id === siteId && connection.store.status === 'active' && !connection.checkInDenied && ['owner','admin','staff'].includes(connection.store.role));
   const orders = useMemo(() => ordersForStore(allOrders, siteId), [allOrders, siteId]);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
@@ -52,7 +55,7 @@ export const GlobalOrderNotifications: React.FC = () => {
   }, []);
 
   // Accepting one of several pending orders keeps the same alarm alive.
-  const shouldAlert = pendingCount > 0 && audioState.ready && !audioState.muted;
+  const shouldAlert = authorized && pendingCount > 0 && audioState.ready && !audioState.muted;
   useEffect(() => {
     if (shouldAlert) startOrderAlertLoop(7000, siteId);
     else stopOrderAlertLoop();
@@ -60,6 +63,7 @@ export const GlobalOrderNotifications: React.FC = () => {
   }, [shouldAlert, siteId]);
 
   useEffect(() => {
+    if (!authorized) return;
     if (seenRef.current.site !== siteId) {
       let ids: string[] = [];
       try {
@@ -81,9 +85,10 @@ export const GlobalOrderNotifications: React.FC = () => {
         });
       } catch {}
     }
-  }, [orders, siteId, openQueue, now]);
+  }, [authorized, orders, siteId, openQueue, now]);
 
   const enableSound = async () => {
+    if (!authorized) return;
     const ready = await unlockAudio();
     setAudioError(ready ? '' : 'O navegador não liberou o áudio. Confira as permissões de som e tente novamente.');
     if (!ready) return;
@@ -94,6 +99,7 @@ export const GlobalOrderNotifications: React.FC = () => {
     }
   };
   const paused = audioState.muted && audioState.until > Date.now();
+  if (!authorized) return null;
   return <section className={`order-notification-center ${pendingCount ? 'has-pending' : ''}`} aria-label="Central de novos pedidos">
     <div className="notification-summary">
       <span className="notification-bell"><BellRing size={17}/></span>
